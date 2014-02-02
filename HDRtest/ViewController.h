@@ -7,7 +7,13 @@
 //
 
 #import <UIKit/UIKit.h>
+#import <AssetsLibrary/AssetsLibrary.h>
+#import "GPUImage.h"
+#import "GPUDefaultFilter.h"
+#import "GPUFattalFilter.h"
 
-@interface ViewController : UIViewController
+@interface ViewController : UIViewController <UINavigationControllerDelegate, UIImagePickerControllerDelegate>
+
+@property (nonatomic, strong) UIImage* loadedImage;
 
 @end

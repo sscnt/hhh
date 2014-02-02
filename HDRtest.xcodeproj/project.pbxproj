@@ -21,6 +21,14 @@
 		58066355188A9BE000F97D42 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 58066337188A9BE000F97D42 /* UIKit.framework */; };
 		5806635D188A9BE000F97D42 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 5806635B188A9BE000F97D42 /* InfoPlist.strings */; };
 		5806635F188A9BE000F97D42 /* HDRtestTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 5806635E188A9BE000F97D42 /* HDRtestTests.m */; };
+		58066374188A9D7800F97D42 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 58066373188A9D7800F97D42 /* CoreMedia.framework */; };
+		58066376188A9D8100F97D42 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 58066375188A9D8100F97D42 /* CoreAudio.framework */; };
+		58066378188A9D8B00F97D42 /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 58066377188A9D8B00F97D42 /* OpenGLES.framework */; };
+		5806637A188A9D9900F97D42 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 58066379188A9D9900F97D42 /* AVFoundation.framework */; };
+		5806637C188A9DA100F97D42 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5806637B188A9DA100F97D42 /* QuartzCore.framework */; };
+		580C4B8F188B7D3800FF5637 /* GPUDefaultFilter.m in Sources */ = {isa = PBXBuildFile; fileRef = 580C4B8E188B7D3800FF5637 /* GPUDefaultFilter.m */; };
+		58F037B1188AC66400BB28F3 /* GPUFattalFilter.m in Sources */ = {isa = PBXBuildFile; fileRef = 58F037B0188AC66400BB28F3 /* GPUFattalFilter.m */; };
+		58F037B2188AC86D00BB28F3 /* libGPUImage.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 58F037AA188AB44E00BB28F3 /* libGPUImage.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -30,6 +38,20 @@
 			proxyType = 1;
 			remoteGlobalIDString = 5806632F188A9BE000F97D42;
 			remoteInfo = HDRtest;
+		};
+		58F037A9188AB44E00BB28F3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 58F037A3188AB44E00BB28F3 /* GPUImage.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = BCF1A33414DDB1EC00852800;
+			remoteInfo = GPUImage;
+		};
+		58F037AB188AB44E00BB28F3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 58F037A3188AB44E00BB28F3 /* GPUImage.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = BCF1A34414DDB1EC00852800;
+			remoteInfo = GPUImageTests;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -53,6 +75,16 @@
 		5806635A188A9BE000F97D42 /* HDRtestTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "HDRtestTests-Info.plist"; sourceTree = "<group>"; };
 		5806635C188A9BE000F97D42 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		5806635E188A9BE000F97D42 /* HDRtestTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = HDRtestTests.m; sourceTree = "<group>"; };
+		58066373188A9D7800F97D42 /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
+		58066375188A9D8100F97D42 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
+		58066377188A9D8B00F97D42 /* OpenGLES.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGLES.framework; path = System/Library/Frameworks/OpenGLES.framework; sourceTree = SDKROOT; };
+		58066379188A9D9900F97D42 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		5806637B188A9DA100F97D42 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		580C4B8D188B7D3800FF5637 /* GPUDefaultFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GPUDefaultFilter.h; sourceTree = "<group>"; };
+		580C4B8E188B7D3800FF5637 /* GPUDefaultFilter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GPUDefaultFilter.m; sourceTree = "<group>"; };
+		58F037A3188AB44E00BB28F3 /* GPUImage.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = GPUImage.xcodeproj; path = GPUImage/framework/GPUImage.xcodeproj; sourceTree = "<group>"; };
+		58F037AF188AC66400BB28F3 /* GPUFattalFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GPUFattalFilter.h; sourceTree = "<group>"; };
+		58F037B0188AC66400BB28F3 /* GPUFattalFilter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GPUFattalFilter.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,6 +92,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				58F037B2188AC86D00BB28F3 /* libGPUImage.a in Frameworks */,
+				5806637C188A9DA100F97D42 /* QuartzCore.framework in Frameworks */,
+				5806637A188A9D9900F97D42 /* AVFoundation.framework in Frameworks */,
+				58066378188A9D8B00F97D42 /* OpenGLES.framework in Frameworks */,
+				58066376188A9D8100F97D42 /* CoreAudio.framework in Frameworks */,
+				58066374188A9D7800F97D42 /* CoreMedia.framework in Frameworks */,
 				58066336188A9BE000F97D42 /* CoreGraphics.framework in Frameworks */,
 				58066338188A9BE000F97D42 /* UIKit.framework in Frameworks */,
 				58066334188A9BE000F97D42 /* Foundation.framework in Frameworks */,
@@ -101,6 +139,12 @@
 		58066332188A9BE000F97D42 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				58F037A3188AB44E00BB28F3 /* GPUImage.xcodeproj */,
+				5806637B188A9DA100F97D42 /* QuartzCore.framework */,
+				58066379188A9D9900F97D42 /* AVFoundation.framework */,
+				58066377188A9D8B00F97D42 /* OpenGLES.framework */,
+				58066375188A9D8100F97D42 /* CoreAudio.framework */,
+				58066373188A9D7800F97D42 /* CoreMedia.framework */,
 				58066333188A9BE000F97D42 /* Foundation.framework */,
 				58066335188A9BE000F97D42 /* CoreGraphics.framework */,
 				58066337188A9BE000F97D42 /* UIKit.framework */,
@@ -112,6 +156,10 @@
 		58066339188A9BE000F97D42 /* HDRtest */ = {
 			isa = PBXGroup;
 			children = (
+				580C4B8D188B7D3800FF5637 /* GPUDefaultFilter.h */,
+				580C4B8E188B7D3800FF5637 /* GPUDefaultFilter.m */,
+				58F037AF188AC66400BB28F3 /* GPUFattalFilter.h */,
+				58F037B0188AC66400BB28F3 /* GPUFattalFilter.m */,
 				58066342188A9BE000F97D42 /* AppDelegate.h */,
 				58066343188A9BE000F97D42 /* AppDelegate.m */,
 				58066345188A9BE000F97D42 /* Main.storyboard */,
@@ -150,6 +198,15 @@
 				5806635B188A9BE000F97D42 /* InfoPlist.strings */,
 			);
 			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		58F037A4188AB44E00BB28F3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				58F037AA188AB44E00BB28F3 /* libGPUImage.a */,
+				58F037AC188AB44E00BB28F3 /* GPUImageTests.octest */,
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -215,6 +272,12 @@
 			mainGroup = 58066327188A9BE000F97D42;
 			productRefGroup = 58066331188A9BE000F97D42 /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = 58F037A4188AB44E00BB28F3 /* Products */;
+					ProjectRef = 58F037A3188AB44E00BB28F3 /* GPUImage.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				5806632F188A9BE000F97D42 /* HDRtest */,
@@ -222,6 +285,23 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		58F037AA188AB44E00BB28F3 /* libGPUImage.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libGPUImage.a;
+			remoteRef = 58F037A9188AB44E00BB28F3 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		58F037AC188AB44E00BB28F3 /* GPUImageTests.octest */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.cfbundle;
+			path = GPUImageTests.octest;
+			remoteRef = 58F037AB188AB44E00BB28F3 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */
 		5806632E188A9BE000F97D42 /* Resources */ = {
@@ -250,7 +330,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				5806634A188A9BE000F97D42 /* ViewController.m in Sources */,
+				580C4B8F188B7D3800FF5637 /* GPUDefaultFilter.m in Sources */,
 				58066344188A9BE000F97D42 /* AppDelegate.m in Sources */,
+				58F037B1188AC66400BB28F3 /* GPUFattalFilter.m in Sources */,
 				58066340188A9BE000F97D42 /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -376,12 +458,18 @@
 		58066363188A9BE000F97D42 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD)";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CODE_SIGN_IDENTITY = "iPhone Developer: Toshiki Nakanishi (WRHUFP3254)";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "HDRtest/HDRtest-Prefix.pch";
 				INFOPLIST_FILE = "HDRtest/HDRtest-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 5.1;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "0EF41EB1-7F45-4DD6-9B27-DFE1790924CC";
+				TARGETED_DEVICE_FAMILY = 1;
+				USER_HEADER_SEARCH_PATHS = "./GPUImage/framework/**";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -389,12 +477,18 @@
 		58066364188A9BE000F97D42 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD)";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CODE_SIGN_IDENTITY = "iPhone Distribution: Toshiki Nakanishi";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "HDRtest/HDRtest-Prefix.pch";
 				INFOPLIST_FILE = "HDRtest/HDRtest-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 5.1;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "8878AC82-C3B6-4906-9CED-DF68838C9782";
+				TARGETED_DEVICE_FAMILY = 1;
+				USER_HEADER_SEARCH_PATHS = "./GPUImage/framework/**";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;
@@ -460,6 +554,7 @@
 				58066364188A9BE000F97D42 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		58066365188A9BE000F97D42 /* Build configuration list for PBXNativeTarget "HDRtestTests" */ = {
 			isa = XCConfigurationList;
@@ -468,6 +563,7 @@
 				58066367188A9BE000F97D42 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
