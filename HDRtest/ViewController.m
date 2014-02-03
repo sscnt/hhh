@@ -464,7 +464,7 @@ double absd(double value)
     double l = 1.0;
     int pyramid_count = 0;
     int base_size = (width > height) ? width : height;
-    while (base_size > 32) {
+    while (base_size > 128) {
         base_size /= 2;
         pyramid_count++;
     }
@@ -594,6 +594,7 @@ double absd(double value)
     
     YUV yuv;
     RGB rgb;
+    
 
     double* h_nabla = (double*)malloc(sizeof(double) * width * height * 2);
     double* g_div = (double*)malloc(sizeof(double) * width * height);
@@ -604,41 +605,15 @@ double absd(double value)
     double h;
     double phi;
     double phi_max = 0.0;
-    double L = 1.0;
+    double L = 0.8;
     
-    alpha = 0.1;
-    double beta = 0.8;
+    double g_div_avg = 0.0;
     
-    for (int j = 1 ; j < height - 1; j++)
-    {
-        for (int i = 1; i < width - 1; i++)
-        {
-            phi = 1.0;
-            for(int n = pyramid_count - 1;n >= 0;n--){
-                h_x = (gausian_pyramids[width * height * n + j * width * 4 + (i + 1) * 4 + 3] - gausian_pyramids[width * height * n + j * width * 4 + (i - 1) * 4 + 3]) / pow(2.0, (double)(n + 2));
-                h_y = (gausian_pyramids[width * height * n + (j + 1) * width * 4 + i * 4 + 3] - gausian_pyramids[width * height * n + (j - 1) * width * 4 + i * 4 + 3]) / pow(2.0, (double)(n + 2));
-                h = sqrt(h_x * h_x + h_y * h_y);
-                phi *= L * (alpha / h) * pow(h / alpha, beta);
-            }
-            h_x = (radiances[j * width * 4 + (i + 1) * 4 + 3] - radiances[j * width * 4 + (i - 1) * 4 + 3]) / 2.0;
-            h_y = (radiances[(j + 1) * width * 4 + i * 4 + 3] - radiances[(j - 1) * width * 4 + i * 4 + 3]) / 2.0;
-            h = sqrt(h_x * h_x + h_y * h_y);
-
-            phi *= (alpha / h) * pow(h / alpha, beta);
-            phis[j * width + i] = 0.0;
-            if(isnan(phi)){
-                phi = 1.0;
-            }
-            phis[j * width + i] = phi;
-        }
-    }
-        
-    bool* flags = (bool*)malloc(sizeof(bool) * width * height);
+    
     for (int j = 0 ; j < height; j++)
     {
         for (int i = 0; i < width; i++)
         {
-            flags[j * width + i] = true;
             h_nabla[j * width * 2 + i * 2 + 0] = 0.0;
             h_nabla[j * width * 2 + i * 2 + 1] = 0.0;
             g_div[j * width + i] = 0.0;
@@ -655,54 +630,129 @@ double absd(double value)
             
             h_nabla[j * width * 2 + i * 2 + 0] = radiances[(j * width) * 4 + (i + 1) * 4 + 3] - lum;    //nabla Hx
             h_nabla[j * width * 2 + i * 2 + 1] = radiances[((j + 1) * width) * 4 + i * 4 + 3] - lum;    //nabla Hy
+            tmp = sqrt(h_nabla[j * width * 2 + i * 2 + 0] * h_nabla[j * width * 2 + i * 2 + 0] + h_nabla[j * width * 2 + i * 2 + 1] * h_nabla[j * width * 2 + i * 2 + 1]);
+            g_div_avg += tmp;
+        }
+    }
+    
+    g_div_avg /= width * height;
+    NSLog(@"g_div_avg:%lf", g_div_avg);
+
+    alpha = 0.1 * g_div_avg;
+    double beta = 0.8;
+
+    
+    for (int j = 1 ; j < height - 1; j++)
+    {
+        for (int i = 1; i < width - 1; i++)
+        {
+            phi = 1.0;
+            for(int n = pyramid_count - 1;n >= 0;n--){
+                h_x = (gausian_pyramids[width * height * n + j * width + (i + 1)] - gausian_pyramids[width * height * n + j * width + (i - 1)]) / pow(2.0, (double)(n + 2));
+                h_y = (gausian_pyramids[width * height * n + (j + 1) * width + i] - gausian_pyramids[width * height * n + (j - 1) * width + i]) / pow(2.0, (double)(n + 2));
+                h = sqrt(h_x * h_x + h_y * h_y);
+                tmp = L * (alpha / h) * pow(h / alpha, beta);
+                if(tmp > 1.0){
+                    tmp = 1.0;
+                }
+                phi *= tmp;
+            }
+            h_x = (radiances[j * width * 4 + (i + 1) * 4 + 3] - radiances[j * width * 4 + (i - 1) * 4 + 3]) / 2.0;
+            h_y = (radiances[(j + 1) * width * 4 + i * 4 + 3] - radiances[(j - 1) * width * 4 + i * 4 + 3]) / 2.0;
+            h = sqrt(h_x * h_x + h_y * h_y);
+            
+            tmp = (alpha / h) * pow(h / alpha, beta);
+            if(tmp > 1.0){
+                tmp = 1.0;
+            }
+            phi *= tmp;
+
+            phis[j * width + i] = 0.0;
+            if(isnan(phi)){
+                phi = 1.0;
+            }
+            phis[j * width + i] = phi;
+        }
+    }
+        
+    bool* flags = (bool*)malloc(sizeof(bool) * width * height);
+    for (int j = 0 ; j < height; j++)
+    {
+        for (int i = 0; i < width; i++)
+        {
+            flags[j * width + i] = true;
+            if(j == 0 || j == height - 1){
+                continue;
+            }
+            if(i == 0 || i == width - 1){
+                continue;
+            }
+            
+            radiance_index = (j * width) * 4 + i * 4;
+            lum = radiances[radiance_index + 3];
+            
             
             phi = phis[j * width + i];
-            h_nabla[j * width + i + 0] *= phi;
-            h_nabla[j * width + i + 1] *= phi;            
+            //h_nabla[j * width + i + 0] *= phi;
+            //h_nabla[j * width + i + 1] *= phi;
             
-            g_div[j * width + i] += h_nabla[j * width * 2 + i * 2 + 0] - h_nabla[j * width * 2 + (i - 1) * 2 + 0];
-            g_div[j * width + i] += h_nabla[j * width * 2 + i * 2 + 1] - h_nabla[(j - 1) * width * 2 + i * 2 + 1];
+            g_div[j * width + i] += phi * (h_nabla[j * width * 2 + (i + 1) * 2 + 0] + h_nabla[j * width * 2 + (i - 1) * 2 + 0]);
+            g_div[j * width + i] += phi * (h_nabla[(j + 1) * width * 2 + i * 2 + 1] + h_nabla[(j - 1) * width * 2 + i * 2 + 1]);
             
-
+            /*
+             g_div[j * width + i] += h_nabla[j * width * 2 + i * 2 + 0] - h_nabla[j * width * 2 + (i - 1) * 2 + 0];
+             g_div[j * width + i] += h_nabla[j * width * 2 + i * 2 + 1] - h_nabla[(j - 1) * width * 2 + i * 2 + 1];
+             */
         }
     }
     
     double prev_i;
-    double threshold = 0.001;
+    double threshold = 0.1;
     double max_i = 0.001;
     double current_err = 0.0;
     double max_err = 0.0;
     int updated = 1;
+    bool cflag = true;
     
-    while (updated > 0) {
-        updated = 0;
-        for (int j = 1 ; j < height - 1; j++)
-        {
-            for (int i = 1; i < width - 1; i++)
+    while (threshold > 0.001) {
+        threshold /= 10.0;
+        NSLog(@"threshold:%lf", threshold);
+        updated = 1;
+        cflag = !cflag;
+        while (updated > 0) {
+            updated = 0;
+            for (int j = 1 ; j < height - 1; j++)
             {
-                if(flags[j * width + i] == false){
-                    continue;
-                }
-                prev_i = result[j * width + i];
-                result[j * width + i] = 0.25 * (result[j * width + i + 1] + result[j * width + i - 1] + result[(j + 1) * width + i] + result[(j - 1) * width + i] - g_div[j * width + i]);
-                result[j * width + i] = prev_i + 1.25 * (result[j * width + i] - prev_i);
-                if(absd(result[j * width + i]) > max_i){
-                    max_i = absd(result[j * width + i]);
-                }
-                current_err = absd(prev_i - result[j * width + i]) / max_i;
-                if(current_err > threshold){
-                    updated++;
-                    flags[j * width + i] = true;
-                    flags[j * width + i - 1] = true;
-                    flags[j * width + i + 1] = true;
-                    flags[(j + 1) * width + i] = true;
-                    flags[(j - 1) * width + i] = true;
-                }else{
-                    flags[j * width + i] = false;
+                for (int i = 1; i < width - 1; i++)
+                {
+                    if(flags[j * width + i] == cflag){
+                        continue;
+                    }
+                    if(j == 513 && i == 22){
+                        ;
+                    }
+
+                    prev_i = result[j * width + i];
+                    result[j * width + i] = 0.25 * (result[j * width + i + 1] + result[j * width + i - 1] + result[(j + 1) * width + i] + result[(j - 1) * width + i] - g_div[j * width + i]);
+                    result[j * width + i] = prev_i + 1.25 * (result[j * width + i] - prev_i);
+                    if(absd(result[j * width + i]) > max_i){
+                        max_i = absd(result[j * width + i]);
+                    }
+                    current_err = absd(prev_i - result[j * width + i]) / max_i;
+                    if(current_err > threshold){
+                        updated++;
+                        flags[j * width + i] = !cflag;
+                        flags[j * width + i - 1] = !cflag;
+                        flags[j * width + i + 1] = !cflag;
+                        flags[(j + 1) * width + i] = !cflag;
+                        flags[(j - 1) * width + i] = !cflag;
+                    }else{
+                        flags[j * width + i] = cflag;
+                    }
                 }
             }
+            NSLog(@"Updated:%d", updated);
         }
-        NSLog(@"Updated:%d", updated);
     }
 
     
@@ -738,7 +788,7 @@ double absd(double value)
             new_g_div[j * width + i] += new_h_nabla[j * width * 2 + i * 2 + 1] - new_h_nabla[(j - 1) * width * 2 + i * 2 + 1];
             
             
-            if(i == 304 && j == 94){
+            if(i == 22 && j == 513){
                 NSLog(@"original g_div:%lf", g_div[j * width + i]);
                 NSLog(@"new g_div:%lf", new_g_div[j * width + i]);
                 
@@ -746,11 +796,6 @@ double absd(double value)
             
         }
     }
-    
-    free(new_g_div);
-    free(new_h_nabla);
-
-    
     l_white = 0.0;
     
     for (int j = 1 ; j < height - 1; j++)
@@ -765,13 +810,7 @@ double absd(double value)
             if(result[j * width + i] > l_white){
                 l_white = result[j * width + i];
             }
-            
-            
-            if(i == 304 && j == 94){
-                //NSLog(@"original g_div:%lf", g_div[j * width + i]);
-                //NSLog(@"new g_div:%lf", new_g_div[j * width + i]);
-                
-            }
+
         }
     }
     
@@ -791,10 +830,15 @@ double absd(double value)
             yuv.y = result[j * width + i];
             rgb = yuv2rgb(yuv.y, yuv.u, yuv.v);
             
+            if(j == 513 && i == 22){
+                NSLog(@"original g_div:%lf", g_div[j * width + i]);
+                NSLog(@"new g_div:%lf", new_g_div[j * width + i]);
+            }
+
             tmp = radiances[radiance_index + 0];
             tmp = radiances[radiance_index + 3];
             tmp = result[j * width + i];
-            
+                        
             
             rgb.r = pow(radiances[radiance_index + 0] / radiances[radiance_index + 3], s) * result[j * width + i];
             rgb.g = pow(radiances[radiance_index + 1] / radiances[radiance_index + 3], s) * result[j * width + i];
@@ -807,6 +851,11 @@ double absd(double value)
             *(pixel + 2) = (int)MAX(MIN(round(rgb.b * 255.0), 255.0), 0.0);
         }
     }
+
+    
+    free(new_g_div);
+    free(new_h_nabla);
+
 
     free(g_div);
     free(result);
