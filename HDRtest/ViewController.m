@@ -541,32 +541,54 @@ double absd(double value)
      */
     
     NSLog(@"pyramid_count:%d", pyramid_count);
-    int range = 1;
+    int range = 4;
     double N;
     double weight, sum;
     int x, y;
+    double* g_table = (double*)malloc(sizeof(double) * width * height);
+    double sigma;
     
     for(int n = 0;n < pyramid_count;n++){
-        y = 0;
-        for(x = 0;x < width;x++){
-            N = 0.0;
-            sum = 0.0;
-            lum = radiances[y * width * 4 + x * 4 + 3];
-            for(int xx = -range;xx <= range;xx++){
-                if(x + xx < 0 || x + xx > width){
-                    continue;
+        sigma = 0.3 * ((double)(range) / 2.0 - 1.0) + 0.8;
+        //sigma = range;
+        for (y = 0; y < height; y++) {
+            for(x = 0;x < width;x++){
+                N = 0.0;
+                sum = 0.0;
+                for(int xx = -range;xx <= range;xx++){
+                    if(x + xx < 0 || x + xx >= width){
+                        continue;
+                    }
+                    _lum = radiances[y * width * 4 + (x + xx) * 4 + 3];
+                    weight = exp(-1 * ((xx * xx) / (2.0 * sigma * sigma)));
+                    N += weight;
+                    sum += _lum * weight;
                 }
-                _lum = radiances[y * width * 4 + (x + xx) * 4 + 3];
-                weight = exp(-1 * ((_lum - lum) * (_lum - lum)) / (2.0 * range * range));
-                N += weight;
-                sum += _lum * weight;
+                g_table[y * width + x] = sum / N;
             }
-            gausian_pyramids[y * width * pyramid_count + x * pyramid_count + n] = sum;
-            y++;
         }
         
+        for(x = 0;x < width;x++){
+            for (y = 0; y < height; y++) {
+                N = 0.0;
+                sum = 0.0;
+                for(int yy = -range;yy <= range;yy++){
+                    if(y + yy < 0 || y + yy >= height){
+                        continue;
+                    }
+                    _lum = g_table[(y + yy) * width + x];
+                    weight = exp(-1 * ((yy * yy)) / (2.0 * sigma * sigma));
+                    N += weight;
+                    sum += _lum * weight;
+                }
+                gausian_pyramids[width * height * n + y * width + x] = sum / N;
+            }
+        }
         range *= 2;
+        NSLog(@"pyramid");
     }
+    
+    free(g_table);
     
     
     
@@ -582,6 +604,7 @@ double absd(double value)
     double h;
     double phi;
     double phi_max = 0.0;
+    double L = 1.0;
     
     alpha = 0.1;
     double beta = 0.8;
@@ -590,10 +613,18 @@ double absd(double value)
     {
         for (int i = 1; i < width - 1; i++)
         {
+            phi = 1.0;
+            for(int n = pyramid_count - 1;n >= 0;n--){
+                h_x = (gausian_pyramids[width * height * n + j * width * 4 + (i + 1) * 4 + 3] - gausian_pyramids[width * height * n + j * width * 4 + (i - 1) * 4 + 3]) / pow(2.0, (double)(n + 2));
+                h_y = (gausian_pyramids[width * height * n + (j + 1) * width * 4 + i * 4 + 3] - gausian_pyramids[width * height * n + (j - 1) * width * 4 + i * 4 + 3]) / pow(2.0, (double)(n + 2));
+                h = sqrt(h_x * h_x + h_y * h_y);
+                phi *= L * (alpha / h) * pow(h / alpha, beta);
+            }
             h_x = (radiances[j * width * 4 + (i + 1) * 4 + 3] - radiances[j * width * 4 + (i - 1) * 4 + 3]) / 2.0;
             h_y = (radiances[(j + 1) * width * 4 + i * 4 + 3] - radiances[(j - 1) * width * 4 + i * 4 + 3]) / 2.0;
             h = sqrt(h_x * h_x + h_y * h_y);
-            phi = (alpha / h) * pow(h / alpha, beta);
+
+            phi *= (alpha / h) * pow(h / alpha, beta);
             phis[j * width + i] = 0.0;
             if(isnan(phi)){
                 phi = 1.0;
@@ -637,7 +668,7 @@ double absd(double value)
     }
     
     double prev_i;
-    double threshold = 0.1;
+    double threshold = 0.001;
     double max_i = 0.001;
     double current_err = 0.0;
     double max_err = 0.0;
@@ -769,7 +800,7 @@ double absd(double value)
             rgb.g = pow(radiances[radiance_index + 1] / radiances[radiance_index + 3], s) * result[j * width + i];
             rgb.b = pow(radiances[radiance_index + 2] / radiances[radiance_index + 3], s) * result[j * width + i];
             
-            rgb.r = rgb.g = rgb.b = exp(gausian_pyramids[j * width * pyramid_count + i * pyramid_count + 4]);
+            //rgb.r = rgb.g = rgb.b = exp(gausian_pyramids[width * height * 4 + j * width + i]);
             
             *(pixel) = (int)MAX(MIN(round(rgb.r * 255.0), 255.0), 0.0);
             *(pixel + 1) = (int)MAX(MIN(round(rgb.g * 255.0), 255.0), 0.0);
