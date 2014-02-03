@@ -293,6 +293,7 @@ double absd(double value)
     return value;
 }
 
+
 - (UIImage *)process:(UIImage *)inputImage
 {
     UIImage* resultImage;
@@ -468,6 +469,8 @@ double absd(double value)
         pyramid_count++;
     }
     double* gausian_pyramids = (double *)malloc(sizeof(double) * width * height * pyramid_count);
+    
+    /*
     int cf = (int)pow(2.0, pyramid_count - 1) * 2 + 1;
     double* coefficient = (double*)malloc(sizeof(double) * (cf * (cf + 1)) / 2);
     coefficient[0] = 1.0;
@@ -488,7 +491,6 @@ double absd(double value)
         }
     }
     for(int i = 2;i < cf;i++){
-        NSLog(@"===============");
         index = i * (i + 1) / 2;
         sum = 0.0;
         for(int j = 0;j <= i;j++){
@@ -496,13 +498,77 @@ double absd(double value)
         }
         for(int j = 0;j <= i;j++){
             coefficient[index + j] /= sum;
-            NSLog(@"%lf", coefficient[index + j]);
         }
     }
 
+    int range, x, y;
     
+    for(int n = 0; n < pyramid_count;n++){
+        range = (int)pow(2.0, n);
+        index = (range * 2 + 1) * (range * 2 + 2) / 2 - range - 1;
+        NSLog(@"middle:%d", index);
+        for (int j = 1 ; j < height - 1; j++)
+        {
+            for (int i = 1; i < width - 1; i++)
+            {
+                sum = 0.0;
+                for(int xx = -range;xx <= range;xx++){
+                    x = i + xx;
+                    if(x < 0){
+                        x = -x;
+                    }else if(x > width){
+                        x = i - xx;
+                    }
+                    tmp = coefficient[index + xx];
+                    sum += radiances[j * width * 4 + x * 4 + 3] * tmp;
+                }
+                for(int yy = -range;yy <= range;yy++){
+                    y = j + yy;
+                    if(y < 0){
+                        y = -y;
+                    }else if(y > height){
+                        y = j - yy;
+                    }
+                    tmp = coefficient[index + yy];
+                    sum += radiances[y * width * 4 + i * 4 + 3] * tmp;
+                }
+                gausian_pyramids[j * width * pyramid_count + i * pyramid_count + n] = sum;
+            }
+        }
+
+    }
+
+     */
     
     NSLog(@"pyramid_count:%d", pyramid_count);
+    int range = 1;
+    double N;
+    double weight, sum;
+    int x, y;
+    
+    for(int n = 0;n < pyramid_count;n++){
+        y = 0;
+        for(x = 0;x < width;x++){
+            N = 0.0;
+            sum = 0.0;
+            lum = radiances[y * width * 4 + x * 4 + 3];
+            for(int xx = -range;xx <= range;xx++){
+                if(x + xx < 0 || x + xx > width){
+                    continue;
+                }
+                _lum = radiances[y * width * 4 + (x + xx) * 4 + 3];
+                weight = exp(-1 * ((_lum - lum) * (_lum - lum)) / (2.0 * range * range));
+                N += weight;
+                sum += _lum * weight;
+            }
+            gausian_pyramids[y * width * pyramid_count + x * pyramid_count + n] = sum;
+            y++;
+        }
+        
+        range *= 2;
+    }
+    
+    
     
     YUV yuv;
     RGB rgb;
@@ -535,7 +601,7 @@ double absd(double value)
             phis[j * width + i] = phi;
         }
     }
-    
+        
     bool* flags = (bool*)malloc(sizeof(bool) * width * height);
     for (int j = 0 ; j < height; j++)
     {
@@ -571,7 +637,7 @@ double absd(double value)
     }
     
     double prev_i;
-    double threshold = 0.0001;
+    double threshold = 0.1;
     double max_i = 0.001;
     double current_err = 0.0;
     double max_err = 0.0;
@@ -703,7 +769,7 @@ double absd(double value)
             rgb.g = pow(radiances[radiance_index + 1] / radiances[radiance_index + 3], s) * result[j * width + i];
             rgb.b = pow(radiances[radiance_index + 2] / radiances[radiance_index + 3], s) * result[j * width + i];
             
-            //rgb.r = rgb.g = rgb.b = phis_g[j * width + i];
+            rgb.r = rgb.g = rgb.b = exp(gausian_pyramids[j * width * pyramid_count + i * pyramid_count + 4]);
             
             *(pixel) = (int)MAX(MIN(round(rgb.r * 255.0), 255.0), 0.0);
             *(pixel + 1) = (int)MAX(MIN(round(rgb.g * 255.0), 255.0), 0.0);
