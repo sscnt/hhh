@@ -464,7 +464,7 @@ double absd(double value)
     double l = 1.0;
     int pyramid_count = 0;
     int base_size = (width > height) ? width : height;
-    while (base_size > 128) {
+    while (base_size > 32) {
         base_size /= 2;
         pyramid_count++;
     }
@@ -541,15 +541,22 @@ double absd(double value)
      */
     
     NSLog(@"pyramid_count:%d", pyramid_count);
-    int range = 4;
+    int range = 8;
+    int _range = range;
     double N;
     double weight, sum;
     int x, y;
     double* g_table = (double*)malloc(sizeof(double) * width * height);
     double sigma;
+    int w_table_length = (int)(range * 2.0 * (pow(2.0, (double)pyramid_count) - 1.0)) + pyramid_count;
+    int w_table_index = 0;
+    double* w_table = (double*)malloc(sizeof(double) * w_table_length);
+    for(int i = 0;i < w_table_length;i++){
+        w_table[i] = 77.7;
+    }
     
     for(int n = 0;n < pyramid_count;n++){
-        sigma = 0.3 * ((double)(range) / 2.0 - 1.0) + 0.8;
+        sigma = 0.3 * ((double)(_range) / 2.0 - 1.0) + 0.8;
         //sigma = range;
         for (y = 0; y < height; y++) {
             for(x = 0;x < width;x++){
@@ -560,7 +567,12 @@ double absd(double value)
                         continue;
                     }
                     _lum = radiances[y * width * 4 + (x + xx) * 4 + 3];
-                    weight = exp(-1 * ((xx * xx) / (2.0 * sigma * sigma)));
+                    w_table_index = (int)(range * 2.0 * (pow(2.0, (double)n + 1) - 1.0)) + n - range + xx;
+                    weight = w_table[w_table_index];
+                    if(weight == 77.7){
+                        weight = exp(-1 * ((xx * xx) / (2.0 * sigma * sigma)));
+                        w_table[w_table_index] = weight;
+                    }
                     N += weight;
                     sum += _lum * weight;
                 }
@@ -577,18 +589,24 @@ double absd(double value)
                         continue;
                     }
                     _lum = g_table[(y + yy) * width + x];
-                    weight = exp(-1 * ((yy * yy)) / (2.0 * sigma * sigma));
+                    w_table_index = (int)(range * 2.0 * (pow(2.0, (double)n + 1) - 1.0)) + n - range + yy;
+                    weight = w_table[w_table_index];
+                    if(weight == 77.7){
+                        weight = exp(-1 * ((yy * yy) / (2.0 * sigma * sigma)));
+                        w_table[w_table_index] = weight;
+                    }
                     N += weight;
                     sum += _lum * weight;
                 }
                 gausian_pyramids[width * height * n + y * width + x] = sum / N;
             }
         }
-        range *= 2;
+        _range *= 2;
         NSLog(@"pyramid");
     }
     
     free(g_table);
+    free(w_table);
     
     
     
@@ -693,7 +711,7 @@ double absd(double value)
             
             
             phi = phis[j * width + i];
-            phi = 1.0;
+            //phi = 1.0;
             //h_nabla[j * width + i + 0] *= phi;
             //h_nabla[j * width + i + 1] *= phi;
             
@@ -785,12 +803,8 @@ double absd(double value)
 
             lum = result[j * width + i];
             
-            new_h_nabla[j * width * 2 + i * 2 + 0] = result[j * width + i + 1] - lum;    //nabla Hx
-            new_h_nabla[j * width * 2 + i * 2 + 1] = result[(j + 1) * width + i] - lum;    //nabla Hy
-            
-            
-            new_g_div[j * width + i] += new_h_nabla[j * width * 2 + (i + 1) * 2 + 0] + new_h_nabla[j * width * 2 + (i - 1) * 2 + 0];
-            new_g_div[j * width + i] += new_h_nabla[(j + 1) * width * 2 + i * 2 + 1] + new_h_nabla[(j - 1) * width * 2 + i * 2 + 1];
+            new_g_div[j * width + i] += result[j * width + i + 1] + result[j * width + i - 1] - 2.0 * lum;
+            new_g_div[j * width + i] += result[(j + 1) * width + i] + result[(j - 1) * width + i] - 2.0 * lum;
             
             
             if(i == 47 && j == 173){
@@ -821,7 +835,8 @@ double absd(double value)
     NSLog(@"l_white:%lf", l_white);
     
     ratio = 1.0 / l_white;
-    double s = 0.4;
+    double s = 0.5;
+    alpha = 0.3;
     
     for (int j = 1 ; j < height - 1; j++)
     {
@@ -838,11 +853,39 @@ double absd(double value)
             tmp = radiances[radiance_index + 3];
             tmp = result[j * width + i];
             
+            
+        
+            
+            result[j * width + i] = result[j * width + i] / (1.0 + result[j * width + i]);
+            
             rgb.r = pow(radiances[radiance_index + 0] / radiances[radiance_index + 3], s) * result[j * width + i];
             rgb.g = pow(radiances[radiance_index + 1] / radiances[radiance_index + 3], s) * result[j * width + i];
             rgb.b = pow(radiances[radiance_index + 2] / radiances[radiance_index + 3], s) * result[j * width + i];
             
-            //rgb.r = rgb.g = rgb.b = exp(gausian_pyramids[width * height * 4 + j * width + i]);
+            tmp = (double)*(pixel) / 255.0;
+            tmp = rgb.r * alpha + (1.0 - alpha) * tmp;
+            if(rgb.r < 0.5){
+                rgb.r = pow(tmp, (1.0 - rgb.r) / 0.5);
+            }else{
+                rgb.r = pow(tmp, 0.5 / rgb.r);
+            }
+            tmp = (double)*(pixel + 1) / 255.0;
+            tmp = rgb.g * alpha + (1.0 - alpha) * tmp;
+            if(rgb.g < 0.5){
+                rgb.g = pow(tmp, (1.0 - rgb.g) / 0.5);
+            }else{
+                rgb.g = pow(tmp, 0.5 / rgb.g);
+            }
+            tmp = (double)*(pixel + 2) / 255.0;
+            tmp = rgb.b * alpha + (1.0 - alpha) * tmp;
+            if(rgb.b < 0.5){
+                rgb.b = pow(tmp, (1.0 - rgb.b) / 0.5);
+            }else{
+                rgb.b = pow(tmp, 0.5 / rgb.b);
+            }
+            
+            rgb.r = rgb.g = rgb.b = exp(gausian_pyramids[width * height * 3 + j * width + i]);
+            //rgb.r = rgb.g = rgb.b = result[j * width + i] / (1.0 + result[j * width + i]);
             
             *(pixel) = (int)MAX(MIN(round(rgb.r * 255.0), 255.0), 0.0);
             *(pixel + 1) = (int)MAX(MIN(round(rgb.g * 255.0), 255.0), 0.0);
