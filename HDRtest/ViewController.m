@@ -464,7 +464,7 @@ double absd(double value)
     double l = 1.0;
     int pyramid_count = 0;
     int base_size = (width > height) ? width : height;
-    while (base_size > 32) {
+    while (base_size > 64) {
         base_size /= 2;
         pyramid_count++;
     }
@@ -541,7 +541,7 @@ double absd(double value)
      */
     
     NSLog(@"pyramid_count:%d", pyramid_count);
-    int range = 8;
+    int range = 4;
     int _range = range;
     double N;
     double weight, sum;
@@ -692,6 +692,9 @@ double absd(double value)
             if(isnan(phi)){
                 phi = 1.0;
             }
+            if(phi < 0.85){
+                phi = 0.85;
+            }
             phis[j * width + i] = phi;
         }
     }
@@ -764,8 +767,8 @@ double absd(double value)
                         continue;
                     }
                     
-                    if(j == 513 && i == 22){
-                        ;
+                    if(j == 267 && i == 194){
+                        tmp = radiances[j * width * 4 + i * 4 + 3] - result[j * width + i];
                     }
 
                     prev_i = result[j * width + i];
@@ -822,15 +825,18 @@ double absd(double value)
             new_g_div[j * width + i] += result[(j + 1) * width + i] + result[(j - 1) * width + i] - 2.0 * lum;
             
             
-            if(i == 47 && j == 173){
+            if(i == 194 && j == 267){
                 NSLog(@"original g_div:%lf", g_div[j * width + i]);
                 NSLog(@"new g_div:%lf", new_g_div[j * width + i]);
-                
+                NSLog(@"original lum:%lf", radiances[j * width * 4 + i * 4 + 3]);
+                NSLog(@"new lum:%lf", result[j * width + i]);
+                NSLog(@"phi:%lf", phis[j * width + i]);
             }
             
         }
     }
     l_white = 0.0;
+    double l_min = 1.0;
     
     for (int j = 1 ; j < height - 1; j++)
     {
@@ -844,10 +850,18 @@ double absd(double value)
             if(result[j * width + i] > l_white){
                 l_white = result[j * width + i];
             }
+            
+            if(result[j * width + i] < l_min){
+                l_min = result[j * width + i];
+            }
+            if(l_min < 0.000003){
+                ;
+            }
         }
     }
     
     NSLog(@"l_white:%lf", l_white);
+    NSLog(@"l_min:%lf", l_min);
     
     ratio = 1.0 / l_white;
     double s = 0.6;
@@ -860,12 +874,13 @@ double absd(double value)
             radiance_index = (j * width) * 4 + i * 4;
             pixel = buffer + j * bytesPerRow + i * 4;
             tmp = result[j * width + i] / (1.0 + result[j * width + i]);
+    
             
             rgb.r = pow(radiances[radiance_index + 0] / radiances[radiance_index + 3], s) * tmp;
             rgb.g = pow(radiances[radiance_index + 1] / radiances[radiance_index + 3], s) * tmp;
             rgb.b = pow(radiances[radiance_index + 2] / radiances[radiance_index + 3], s) * tmp;
             
-            /*
+            
             tmp = (double)*(pixel) / 255.0;
             tmp = rgb.r * alpha + (1.0 - alpha) * tmp;
             if(rgb.r < 0.5){
@@ -887,10 +902,10 @@ double absd(double value)
             }else{
                 rgb.b = pow(tmp, 0.5 / rgb.b);
             }
-             */
+             
             
             //rgb.r = rgb.g = rgb.b = exp(gausian_pyramids[width * height * 4 + j * width + i]);
-            rgb.r = rgb.g = rgb.b = result[j * width + i];
+            //rgb.r = rgb.g = rgb.b = result[j * width + i];
             
             *(pixel) = (int)MAX(MIN(round(rgb.r * 255.0), 255.0), 0.0);
             *(pixel + 1) = (int)MAX(MIN(round(rgb.g * 255.0), 255.0), 0.0);
