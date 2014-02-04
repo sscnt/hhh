@@ -562,12 +562,15 @@ double absd(double value)
             for(x = 0;x < width;x++){
                 N = 0.0;
                 sum = 0.0;
-                for(int xx = -range;xx <= range;xx++){
+                for(int xx = -_range;xx <= _range;xx++){
+                    if(n == 3){
+                        ;
+                    }
                     if(x + xx < 0 || x + xx >= width){
                         continue;
                     }
                     _lum = radiances[y * width * 4 + (x + xx) * 4 + 3];
-                    w_table_index = (int)(range * 2.0 * (pow(2.0, (double)n + 1) - 1.0)) + n - range + xx;
+                    w_table_index = (int)(range * 2.0 * (pow(2.0, (double)n + 1) - 1.0)) + n - _range + xx;
                     weight = w_table[w_table_index];
                     if(weight == 77.7){
                         weight = exp(-1 * ((xx * xx) / (2.0 * sigma * sigma)));
@@ -584,12 +587,12 @@ double absd(double value)
             for (y = 0; y < height; y++) {
                 N = 0.0;
                 sum = 0.0;
-                for(int yy = -range;yy <= range;yy++){
+                for(int yy = -_range;yy <= _range;yy++){
                     if(y + yy < 0 || y + yy >= height){
                         continue;
                     }
                     _lum = g_table[(y + yy) * width + x];
-                    w_table_index = (int)(range * 2.0 * (pow(2.0, (double)n + 1) - 1.0)) + n - range + yy;
+                    w_table_index = (int)(range * 2.0 * (pow(2.0, (double)n + 1) - 1.0)) + n - _range + yy;
                     weight = w_table[w_table_index];
                     if(weight == 77.7){
                         weight = exp(-1 * ((yy * yy) / (2.0 * sigma * sigma)));
@@ -623,7 +626,7 @@ double absd(double value)
     double h;
     double phi;
     double phi_max = 0.0;
-    double L = 0.8;
+    double L = 1.0;
     
     double g_div_avg = 0.0;
     
@@ -694,6 +697,8 @@ double absd(double value)
     }
         
     bool* flags = (bool*)malloc(sizeof(bool) * width * height);
+    double max_phi = 1.0;
+    double min_phi = 1.0;
     for (int j = 0 ; j < height; j++)
     {
         for (int i = 0; i < width; i++)
@@ -711,6 +716,12 @@ double absd(double value)
             
             
             phi = phis[j * width + i];
+            if(max_phi < phi){
+                max_phi = phi;
+            }
+            if(min_phi > phi){
+                min_phi = phi;
+            }
             //phi = 1.0;
             //h_nabla[j * width + i + 0] *= phi;
             //h_nabla[j * width + i + 1] *= phi;
@@ -721,6 +732,7 @@ double absd(double value)
             g_div[j * width + i] += phi * (radiances[j * width * 4 + (i - 1) * 4 + 3] + radiances[j * width * 4 + (i + 1) * 4 + 3] - 2.0 * lum);
             g_div[j * width + i] += phi * (radiances[(j - 1) * width * 4 + i * 4 + 3] + radiances[(j + 1) * width * 4 + i * 4 + 3] - 2.0 * lum);
             
+            tmp = g_div[j * width + i];
             /*
              g_div[j * width + i] += h_nabla[j * width * 2 + i * 2 + 0] - h_nabla[j * width * 2 + (i - 1) * 2 + 0];
              g_div[j * width + i] += h_nabla[j * width * 2 + i * 2 + 1] - h_nabla[(j - 1) * width * 2 + i * 2 + 1];
@@ -781,6 +793,9 @@ double absd(double value)
             NSLog(@"Updated:%d", updated);
         }
     }
+    
+    NSLog(@"max_phi:%lf", max_phi);
+    NSLog(@"min_phi:%lf", min_phi);
 
     
     double* new_h_nabla = (double*)malloc(sizeof(double) * width * height * 2);
@@ -835,7 +850,7 @@ double absd(double value)
     NSLog(@"l_white:%lf", l_white);
     
     ratio = 1.0 / l_white;
-    double s = 0.5;
+    double s = 0.6;
     alpha = 0.3;
     
     for (int j = 1 ; j < height - 1; j++)
@@ -844,24 +859,13 @@ double absd(double value)
         {
             radiance_index = (j * width) * 4 + i * 4;
             pixel = buffer + j * bytesPerRow + i * 4;
-            yuv = rgb2yuv((double)*(pixel) / 255.0, (double)*(pixel + 1) / 255.0, (double)*(pixel + 2) / 255.0);
+            tmp = result[j * width + i] / (1.0 + result[j * width + i]);
             
-            yuv.y = result[j * width + i];
-            rgb = yuv2rgb(yuv.y, yuv.u, yuv.v);
-
-            tmp = radiances[radiance_index + 0];
-            tmp = radiances[radiance_index + 3];
-            tmp = result[j * width + i];
+            rgb.r = pow(radiances[radiance_index + 0] / radiances[radiance_index + 3], s) * tmp;
+            rgb.g = pow(radiances[radiance_index + 1] / radiances[radiance_index + 3], s) * tmp;
+            rgb.b = pow(radiances[radiance_index + 2] / radiances[radiance_index + 3], s) * tmp;
             
-            
-        
-            
-            result[j * width + i] = result[j * width + i] / (1.0 + result[j * width + i]);
-            
-            rgb.r = pow(radiances[radiance_index + 0] / radiances[radiance_index + 3], s) * result[j * width + i];
-            rgb.g = pow(radiances[radiance_index + 1] / radiances[radiance_index + 3], s) * result[j * width + i];
-            rgb.b = pow(radiances[radiance_index + 2] / radiances[radiance_index + 3], s) * result[j * width + i];
-            
+            /*
             tmp = (double)*(pixel) / 255.0;
             tmp = rgb.r * alpha + (1.0 - alpha) * tmp;
             if(rgb.r < 0.5){
@@ -883,9 +887,10 @@ double absd(double value)
             }else{
                 rgb.b = pow(tmp, 0.5 / rgb.b);
             }
+             */
             
-            rgb.r = rgb.g = rgb.b = exp(gausian_pyramids[width * height * 3 + j * width + i]);
-            //rgb.r = rgb.g = rgb.b = result[j * width + i] / (1.0 + result[j * width + i]);
+            //rgb.r = rgb.g = rgb.b = exp(gausian_pyramids[width * height * 4 + j * width + i]);
+            rgb.r = rgb.g = rgb.b = result[j * width + i];
             
             *(pixel) = (int)MAX(MIN(round(rgb.r * 255.0), 255.0), 0.0);
             *(pixel + 1) = (int)MAX(MIN(round(rgb.g * 255.0), 255.0), 0.0);
