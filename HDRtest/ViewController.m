@@ -693,11 +693,15 @@ double absd(double value)
             
             
             phi = phis[j * width + i];
+            phi = 1.0;
             //h_nabla[j * width + i + 0] *= phi;
             //h_nabla[j * width + i + 1] *= phi;
             
-            g_div[j * width + i] += phi * (h_nabla[j * width * 2 + (i + 1) * 2 + 0] + h_nabla[j * width * 2 + (i - 1) * 2 + 0]);
-            g_div[j * width + i] += phi * (h_nabla[(j + 1) * width * 2 + i * 2 + 1] + h_nabla[(j - 1) * width * 2 + i * 2 + 1]);
+            radiance_index = (j * width) * 4 + i * 4;
+            lum = radiances[radiance_index + 3];
+            
+            g_div[j * width + i] += phi * (radiances[j * width * 4 + (i - 1) * 4 + 3] + radiances[j * width * 4 + (i + 1) * 4 + 3] - 2.0 * lum);
+            g_div[j * width + i] += phi * (radiances[(j - 1) * width * 4 + i * 4 + 3] + radiances[(j + 1) * width * 4 + i * 4 + 3] - 2.0 * lum);
             
             /*
              g_div[j * width + i] += h_nabla[j * width * 2 + i * 2 + 0] - h_nabla[j * width * 2 + (i - 1) * 2 + 0];
@@ -714,7 +718,8 @@ double absd(double value)
     int updated = 1;
     bool cflag = true;
     
-    while (threshold > 0.001) {
+    
+    while (threshold > 0.0001) {
         threshold /= 10.0;
         NSLog(@"threshold:%lf", threshold);
         updated = 1;
@@ -728,16 +733,20 @@ double absd(double value)
                     if(flags[j * width + i] == cflag){
                         continue;
                     }
+                    
                     if(j == 513 && i == 22){
                         ;
                     }
 
                     prev_i = result[j * width + i];
                     result[j * width + i] = 0.25 * (result[j * width + i + 1] + result[j * width + i - 1] + result[(j + 1) * width + i] + result[(j - 1) * width + i] - g_div[j * width + i]);
+                    
                     result[j * width + i] = prev_i + 1.25 * (result[j * width + i] - prev_i);
+                    
                     if(absd(result[j * width + i]) > max_i){
                         max_i = absd(result[j * width + i]);
                     }
+                    //tmp = result[(j + 1) * width + i] + result[(j - 1) * width + i] + result[j * width + (i + 1)] + result[j * width + (i - 1)] - 4.0 * result[j * width + i];
                     current_err = absd(prev_i - result[j * width + i]) / max_i;
                     if(current_err > threshold){
                         updated++;
@@ -764,10 +773,6 @@ double absd(double value)
         for (int i = 0; i < width; i++)
         {
 
-            if(j == 2447  && i == 3263){
-                ;
-            }
-
             new_h_nabla[j * width * 2 + i * 2 + 0] = 0.0;
             new_h_nabla[j * width * 2 + i * 2 + 1] = 0.0;
             new_g_div[j * width + i] = 0.0;
@@ -784,11 +789,11 @@ double absd(double value)
             new_h_nabla[j * width * 2 + i * 2 + 1] = result[(j + 1) * width + i] - lum;    //nabla Hy
             
             
-            new_g_div[j * width + i] += new_h_nabla[j * width * 2 + i * 2 + 0] - new_h_nabla[j * width * 2 + (i - 1) * 2 + 0];
-            new_g_div[j * width + i] += new_h_nabla[j * width * 2 + i * 2 + 1] - new_h_nabla[(j - 1) * width * 2 + i * 2 + 1];
+            new_g_div[j * width + i] += new_h_nabla[j * width * 2 + (i + 1) * 2 + 0] + new_h_nabla[j * width * 2 + (i - 1) * 2 + 0];
+            new_g_div[j * width + i] += new_h_nabla[(j + 1) * width * 2 + i * 2 + 1] + new_h_nabla[(j - 1) * width * 2 + i * 2 + 1];
             
             
-            if(i == 22 && j == 513){
+            if(i == 47 && j == 173){
                 NSLog(@"original g_div:%lf", g_div[j * width + i]);
                 NSLog(@"new g_div:%lf", new_g_div[j * width + i]);
                 
@@ -810,7 +815,6 @@ double absd(double value)
             if(result[j * width + i] > l_white){
                 l_white = result[j * width + i];
             }
-
         }
     }
     
@@ -829,16 +833,10 @@ double absd(double value)
             
             yuv.y = result[j * width + i];
             rgb = yuv2rgb(yuv.y, yuv.u, yuv.v);
-            
-            if(j == 513 && i == 22){
-                NSLog(@"original g_div:%lf", g_div[j * width + i]);
-                NSLog(@"new g_div:%lf", new_g_div[j * width + i]);
-            }
 
             tmp = radiances[radiance_index + 0];
             tmp = radiances[radiance_index + 3];
             tmp = result[j * width + i];
-                        
             
             rgb.r = pow(radiances[radiance_index + 0] / radiances[radiance_index + 3], s) * result[j * width + i];
             rgb.g = pow(radiances[radiance_index + 1] / radiances[radiance_index + 3], s) * result[j * width + i];
