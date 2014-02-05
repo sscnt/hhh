@@ -383,7 +383,7 @@ double absd(double value)
                 ev_4 /= exp_4;
                 //w0 = ev_4 - ev4;
                 //tmp = r + w0 * (ev2 + ev4 + ev_2 + ev_4) / 4.0;
-                tmp = (r + ev2 + ev4 + ev_2 + ev_4) / 5.0;
+                tmp = (ev0 + ev2 + ev4 + ev_2 + ev_4) / 5.0;
                 radiances[radiance_index + i] = tmp;
             }
             
@@ -764,11 +764,7 @@ double absd(double value)
                 for (int i = 1; i < width - 1; i++)
                 {
                     if(flags[j * width + i] == cflag){
-                        continue;
-                    }
-                    
-                    if(j == 267 && i == 194){
-                        tmp = radiances[j * width * 4 + i * 4 + 3] - result[j * width + i];
+                        //continue;
                     }
 
                     prev_i = result[j * width + i];
@@ -874,7 +870,7 @@ double absd(double value)
             
             diff = tmp - lum;
             if(diff > 0.0){
-                diff *= pow(lum, 1.0 / 7.0);
+                diff *= 6.0 * lum / (1.0 + 6.0 * lum);
                 //result[j * width + i] = lum + diff;
             }
                         
@@ -887,6 +883,8 @@ double absd(double value)
             if(tmp > max_lum){
                 max_lum = tmp;
             }
+            
+            //result[j * width + i] = 4.0 * lum / (1.0 + 4.0 * lum);
         }
     }
     
@@ -916,7 +914,9 @@ double absd(double value)
             rgb.g = pow(radiances[radiance_index + 1] / radiances[radiance_index + 3], s) * tmp;
             rgb.b = pow(radiances[radiance_index + 2] / radiances[radiance_index + 3], s) * tmp;
             
+            
             /*
+            // Soft Light
             tmp = (double)*(pixel) / 255.0;
             tmp = rgb.r * alpha + (1.0 - alpha) * tmp;
             if(rgb.r < 0.5){
@@ -939,6 +939,31 @@ double absd(double value)
                 rgb.b = pow(tmp, 0.5 / rgb.b);
             }
              */
+            
+            
+            /*
+            // Hard light
+            tmp = (double)*(pixel) / 255.0;
+            if(rgb.r < 0.5){
+                rgb.r = tmp * rgb.r * 2.0;
+            }else{
+                rgb.r = 2.0 * (rgb.r + tmp - tmp * rgb.r) - 1.0;
+            }
+            tmp = (double)*(pixel + 1) / 255.0;
+            if(rgb.g < 0.5){
+                rgb.g = tmp * rgb.g * 2.0;
+            }else{
+                rgb.g = 2.0 * (rgb.g + tmp - tmp * rgb.g) - 1.0;
+            }
+            tmp = (double)*(pixel + 2) / 255.0;
+            if(rgb.b < 0.5){
+                rgb.b = tmp * rgb.b * 2.0;
+            }else{
+                rgb.b = 2.0 * (rgb.b + tmp - tmp * rgb.b) - 1.0;
+            }
+             */
+            
+             
              
             
             //rgb.r = rgb.g = rgb.b = exp(gausian_pyramids[width * height * 4 + j * width + i]);
