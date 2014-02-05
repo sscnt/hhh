@@ -320,13 +320,15 @@ double absd(double value)
     UInt8* pixel;
     NSDate* start = [NSDate date];
     
-    double r, g, b, _r, _g, _b, ev0, ev2, ev4, ev_2, ev_4, exp0, exp2, exp4, exp_2, exp_4;
+    double r, g, b, _r, _g, _b, ev0, ev2, ev4, ev8, ev_2, ev_4, ev_8, exp0, exp2, exp4, exp8, exp_2, exp_4, exp_8;
     
     exp0 = 1.0;
     exp2 = 0.5;
     exp4 = 0.25;
+    exp8 = 0.125;
     exp_2 = 2.0;
     exp_4 = 4.0;
+    exp_8 = 8.0;
     
     double lum, _lum;
     double tmp;
@@ -341,6 +343,8 @@ double absd(double value)
     double lw_global;
     double l_white = 0.0;
     double lw_sum = 0.0;
+    double w0, w1, w2, w3, w4;
+    double set[3] = {0,0, 0.0, 0.0};
     
     
     radiances = (double*)malloc(sizeof(double) * width * height * 4);
@@ -359,32 +363,29 @@ double absd(double value)
             r = (double)*(pixel + 0) / 255.0;
             g = (double)*(pixel + 1) / 255.0;
             b = (double)*(pixel + 2) / 255.0;
-
-                ev2 = r * r;
-                ev4 = ev2 * ev2;
-                ev_2 = r;
-                screen(&ev_2);
-                ev_4 = ev_2;
-                screen(&ev_4);
-                tmp = r + ev2 / exp2 + ev4 / exp4 + ev_2 / exp_2 + ev_4 / exp_4;
-                radiances[radiance_index] = tmp / 5.0;
-                ev2 = g * g;
-                ev4 = ev2 * ev2;
-                ev_2 = g;
-                screen(&ev_2);
-                ev_4 = ev_2;
-                screen(&ev_4);
-                tmp = g + ev2 / exp2 + ev4 / exp4 + ev_2 / exp_2 + ev_4 / exp_4;
-                radiances[radiance_index + 1] = tmp / 5.0;
-                ev2 = b * b;
-                ev4 = ev2 * ev2;
-                ev_2 = b;
-                screen(&ev_2);
-                ev_4 = ev_2;
-                screen(&ev_4);
-                tmp = b + ev2 / exp2 + ev4 / exp4 + ev_2 / exp_2 + ev_4 / exp_4;
-                radiances[radiance_index + 2] = tmp / 5.0;
             
+            set[0] = r;
+            set[1] = g;
+            set[2] = b;
+            
+            for(int i = 0;i < 3;i++){
+                ev0 = set[i];
+                ev2 = ev0 * ev0;
+                ev4 = ev2 * ev2;
+                ev_2 = ev0;
+                screen(&ev_2);
+                ev_4 = ev_2;
+                screen(&ev_4);
+                
+                ev2 /= exp2;
+                ev4 /= exp4;
+                ev_2 /= exp_2;
+                ev_4 /= exp_4;
+                //w0 = ev_4 - ev4;
+                //tmp = r + w0 * (ev2 + ev4 + ev_2 + ev_4) / 4.0;
+                tmp = (r + ev2 + ev4 + ev_2 + ev_4) / 5.0;
+                radiances[radiance_index + i] = tmp;
+            }
             
             lum = rgb2luminance(radiances[radiance_index], radiances[radiance_index + 1], radiances[radiance_index + 2]);
             lw_sum += log(0.0001 + lum);
@@ -392,7 +393,6 @@ double absd(double value)
                 l_white = lum;
             }
             radiances[radiance_index + 3] = log(lum + 0.0001);
-            
         }
     }
     
@@ -541,7 +541,7 @@ double absd(double value)
      */
     
     NSLog(@"pyramid_count:%d", pyramid_count);
-    int range = 4;
+    int range = 2;
     int _range = range;
     double N;
     double weight, sum;
@@ -854,11 +854,45 @@ double absd(double value)
             if(result[j * width + i] < l_min){
                 l_min = result[j * width + i];
             }
-            if(l_min < 0.000003){
-                ;
+        }
+    }
+    
+    double diff;
+    double max_diff = 0.0;
+    double min_diff = 1.0;
+    double max_lum = 0.0;
+    
+    for (int j = 1 ; j < height - 1; j++)
+    {
+        for (int i = 1; i < width - 1; i++)
+        {
+            
+            radiance_index = (j * width) * 4 + i * 4;
+            tmp = result[j * width + i] / (1.0 + result[j * width + i]);
+            result[j * width + i] = tmp;
+            lum = radiances[radiance_index + 3];
+            
+            diff = tmp - lum;
+            if(diff > 0.0){
+                diff *= pow(lum, 1.0 / 7.0);
+                //result[j * width + i] = lum + diff;
+            }
+                        
+            if(diff > max_diff){
+                max_diff = diff;
+            }
+            if(diff < min_diff){
+                min_diff = diff;
+            }
+            if(tmp > max_lum){
+                max_lum = tmp;
             }
         }
     }
+    
+    NSLog(@"max_diff:%lf", max_diff);
+    NSLog(@"min_diff:%lf", min_diff);
+    NSLog(@"max_lum:%lf", max_lum);
     
     NSLog(@"l_white:%lf", l_white);
     NSLog(@"l_min:%lf", l_min);
@@ -866,6 +900,7 @@ double absd(double value)
     ratio = 1.0 / l_white;
     double s = 0.6;
     alpha = 0.3;
+
     
     for (int j = 1 ; j < height - 1; j++)
     {
@@ -873,14 +908,15 @@ double absd(double value)
         {
             radiance_index = (j * width) * 4 + i * 4;
             pixel = buffer + j * bytesPerRow + i * 4;
-            tmp = result[j * width + i] / (1.0 + result[j * width + i]);
+            
+            tmp = result[j * width + i] / max_lum;
     
             
             rgb.r = pow(radiances[radiance_index + 0] / radiances[radiance_index + 3], s) * tmp;
             rgb.g = pow(radiances[radiance_index + 1] / radiances[radiance_index + 3], s) * tmp;
             rgb.b = pow(radiances[radiance_index + 2] / radiances[radiance_index + 3], s) * tmp;
             
-            
+            /*
             tmp = (double)*(pixel) / 255.0;
             tmp = rgb.r * alpha + (1.0 - alpha) * tmp;
             if(rgb.r < 0.5){
@@ -902,6 +938,7 @@ double absd(double value)
             }else{
                 rgb.b = pow(tmp, 0.5 / rgb.b);
             }
+             */
              
             
             //rgb.r = rgb.g = rgb.b = exp(gausian_pyramids[width * height * 4 + j * width + i]);
