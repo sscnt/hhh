@@ -10,6 +10,6 @@
 
 extern NSString *const kDefaultFragmentShaderString;
 
-@interface GPUDefaultFilter : GPUImageFilter
+@interface GPUGaussSeidelFilter : GPUImageFilter
 
 @end

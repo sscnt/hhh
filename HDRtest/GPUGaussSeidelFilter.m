@@ -6,9 +6,9 @@
 //  Copyright (c) 2014年 SSC. All rights reserved.
 //
 
-#import "GPUDefaultFilter.h"
+#import "GPUGaussSeidelFilter.h"
 
-@implementation GPUDefaultFilter
+@implementation GPUGaussSeidelFilter
 
 NSString *const kDefaultFragmentShaderString = SHADER_STRING
 (

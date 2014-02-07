@@ -26,7 +26,7 @@
 		58066378188A9D8B00F97D42 /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 58066377188A9D8B00F97D42 /* OpenGLES.framework */; };
 		5806637A188A9D9900F97D42 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 58066379188A9D9900F97D42 /* AVFoundation.framework */; };
 		5806637C188A9DA100F97D42 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5806637B188A9DA100F97D42 /* QuartzCore.framework */; };
-		580C4B8F188B7D3800FF5637 /* GPUDefaultFilter.m in Sources */ = {isa = PBXBuildFile; fileRef = 580C4B8E188B7D3800FF5637 /* GPUDefaultFilter.m */; };
+		580C4B8F188B7D3800FF5637 /* GPUGaussSeidelFilter.m in Sources */ = {isa = PBXBuildFile; fileRef = 580C4B8E188B7D3800FF5637 /* GPUGaussSeidelFilter.m */; };
 		58F037B1188AC66400BB28F3 /* GPUFattalFilter.m in Sources */ = {isa = PBXBuildFile; fileRef = 58F037B0188AC66400BB28F3 /* GPUFattalFilter.m */; };
 		58F037B2188AC86D00BB28F3 /* libGPUImage.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 58F037AA188AB44E00BB28F3 /* libGPUImage.a */; };
 /* End PBXBuildFile section */
@@ -80,8 +80,8 @@
 		58066377188A9D8B00F97D42 /* OpenGLES.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGLES.framework; path = System/Library/Frameworks/OpenGLES.framework; sourceTree = SDKROOT; };
 		58066379188A9D9900F97D42 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		5806637B188A9DA100F97D42 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
-		580C4B8D188B7D3800FF5637 /* GPUDefaultFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GPUDefaultFilter.h; sourceTree = "<group>"; };
-		580C4B8E188B7D3800FF5637 /* GPUDefaultFilter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GPUDefaultFilter.m; sourceTree = "<group>"; };
+		580C4B8D188B7D3800FF5637 /* GPUGaussSeidelFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GPUGaussSeidelFilter.h; sourceTree = "<group>"; };
+		580C4B8E188B7D3800FF5637 /* GPUGaussSeidelFilter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GPUGaussSeidelFilter.m; sourceTree = "<group>"; };
 		58F037A3188AB44E00BB28F3 /* GPUImage.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = GPUImage.xcodeproj; path = GPUImage/framework/GPUImage.xcodeproj; sourceTree = "<group>"; };
 		58F037AF188AC66400BB28F3 /* GPUFattalFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GPUFattalFilter.h; sourceTree = "<group>"; };
 		58F037B0188AC66400BB28F3 /* GPUFattalFilter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GPUFattalFilter.m; sourceTree = "<group>"; };
@@ -156,8 +156,8 @@
 		58066339188A9BE000F97D42 /* HDRtest */ = {
 			isa = PBXGroup;
 			children = (
-				580C4B8D188B7D3800FF5637 /* GPUDefaultFilter.h */,
-				580C4B8E188B7D3800FF5637 /* GPUDefaultFilter.m */,
+				580C4B8D188B7D3800FF5637 /* GPUGaussSeidelFilter.h */,
+				580C4B8E188B7D3800FF5637 /* GPUGaussSeidelFilter.m */,
 				58F037AF188AC66400BB28F3 /* GPUFattalFilter.h */,
 				58F037B0188AC66400BB28F3 /* GPUFattalFilter.m */,
 				58066342188A9BE000F97D42 /* AppDelegate.h */,
@@ -330,7 +330,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5806634A188A9BE000F97D42 /* ViewController.m in Sources */,
-				580C4B8F188B7D3800FF5637 /* GPUDefaultFilter.m in Sources */,
+				580C4B8F188B7D3800FF5637 /* GPUGaussSeidelFilter.m in Sources */,
 				58066344188A9BE000F97D42 /* AppDelegate.m in Sources */,
 				58F037B1188AC66400BB28F3 /* GPUFattalFilter.m in Sources */,
 				58066340188A9BE000F97D42 /* main.m in Sources */,

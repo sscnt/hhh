@@ -6,7 +6,8 @@
 //  Copyright (c) 2014年 SSC. All rights reserved.
 //
 
-#import "ViewController.h"
+#import "ViewController.h"'
+#import "GPUImageGaussianBlurFilter.h"
 
 @interface ViewController ()
 
@@ -71,7 +72,7 @@
     UIImage* result;
     
     if(true){
-        result = [self process:self.loadedImage];
+        result = [self hdrWithInputImage:self.loadedImage];
 
         
     }    else{
@@ -291,6 +292,399 @@ double absd(double value)
         return -value;
     }
     return value;
+}
+
+void gradient(double* g_div, double* radiances, double* phis, int width, int height){
+    
+    double phi, lum;
+    
+    for (int j = 0; j < height; j++) {
+        g_div[j * width + 0] = 0.0;
+        g_div[j * width + width - 1] = 0.0;
+    }
+    
+    for (int i = 0; i < width; i++) {
+        g_div[0 * width + i] = 0.0;
+        g_div[(height - 1) * width + width - 1] = 0.0;
+    }
+    
+    for (int j = 1 ; j < height - 1; j++)
+    {
+        for (int i = 1; i < width - 1; i++)
+        {
+        
+            lum = radiances[(j * width) * 4 + i * 4 + 3];
+
+            phi = phis[j * width + i];
+            
+            g_div[j * width + i] += phi * (radiances[j * width * 4 + (i - 1) * 4 + 3] + radiances[j * width * 4 + (i + 1) * 4 + 3] - 2.0 * lum);
+            g_div[j * width + i] += phi * (radiances[(j - 1) * width * 4 + i * 4 + 3] + radiances[(j + 1) * width * 4 + i * 4 + 3] - 2.0 * lum);
+        }
+    }
+}
+
+void gaussb(double* result, double* radiances, double* g_div, int width, int height){
+    
+    bool cflag = true;
+    bool* flags = (bool*)malloc(sizeof(bool) * width * height);
+    int updated = 1;
+    double prev_i, max_i, current_err = 0.0, threshold = 0.0001;
+    
+    while (updated > 0) {
+        updated = 0;
+        for (int j = 1 ; j < height - 1; j++)
+        {
+            for (int i = 1; i < width - 1; i++)
+            {
+                if(flags[j * width + i] == cflag){
+                    continue;
+                }
+                
+                prev_i = result[j * width + i];
+                result[j * width + i] = 0.25 * (result[j * width + i + 1] + result[j * width + i - 1] + result[(j + 1) * width + i] + result[(j - 1) * width + i] - g_div[j * width + i]);
+                //result[j * width + i] = prev_i + 1.25 * (result[j * width + i] - prev_i);
+                if(absd(result[j * width + i]) > max_i){
+                    max_i = absd(result[j * width + i]);
+                }
+                //tmp = result[(j + 1) * width + i] + result[(j - 1) * width + i] + result[j * width + (i + 1)] + result[j * width + (i - 1)] - 4.0 * result[j * width + i];
+                current_err = absd(prev_i - result[j * width + i]) / max_i;
+                if(current_err > threshold){
+                    updated++;
+                    flags[j * width + i] = !cflag;
+                    flags[j * width + i - 1] = !cflag;
+                    flags[j * width + i + 1] = !cflag;
+                    flags[(j + 1) * width + i] = !cflag;
+                    flags[(j - 1) * width + i] = !cflag;
+                    flags[(j + 1) * width + i + 1] = !cflag;
+                    flags[(j + 1) * width + i - 1] = !cflag;
+                    flags[(j - 1) * width + i + 1] = !cflag;
+                    flags[(j - 1) * width + i - 1] = !cflag;
+                }else{
+                    flags[j * width + i] = cflag;
+                }
+            }
+        }
+        NSLog(@"Updated:%d", updated);
+    }
+    
+    free(flags);
+}
+
+void expall(double* result, double* radiances, int width, int height){
+    double tmp;
+    for (int j = 1 ; j < height - 1; j++)
+    {
+        for (int i = 1; i < width - 1; i++)
+        {
+            result[j * width + i] = exp(result[j * width + i]);
+            radiances[j * width * 4 + i * 4 + 3] = exp(radiances[j * width * 4 + i * 4 + 3]);
+            tmp = result[j * width + i] / (1.0 + result[j * width + i]);
+            result[j * width + i] = tmp;
+
+        }
+    }
+}
+
+void calcphis(double* phis, double* radiances, int width, int height, double alpha, double beta){
+    double phi, h_x, h_y, tmp, h;
+    for (int j = 1 ; j < height - 1; j++)
+    {
+        for (int i = 1; i < width - 1; i++)
+        {
+            phi = 1.0;
+            h_x = (radiances[j * width * 4 + (i + 1) * 4 + 3] - radiances[j * width * 4 + (i - 1) * 4 + 3]) / 2.0;
+            h_y = (radiances[(j + 1) * width * 4 + i * 4 + 3] - radiances[(j - 1) * width * 4 + i * 4 + 3]) / 2.0;
+            h = sqrt(h_x * h_x + h_y * h_y);
+            
+            tmp = (alpha / h) * pow(h / alpha, beta);
+            if(tmp > 1.0){
+                tmp = 1.0;
+            }
+            phi *= tmp;
+            if(isnan(phi)){
+                phi = 1.0;
+            }
+            phi = MAX(phi, 1.0);
+            phis[j * width + i] = phi;
+        }
+    }
+
+}
+
+- (UIImage *)hdrWithInputImage:(UIImage *)inputImage
+{
+    UIImage* resultImage;
+    
+    /*
+    GPUImagePicture *imagePicture = [[GPUImagePicture alloc] initWithImage:inputImage];
+    GPUImageGaussianBlurFilter* filter6 = [[GPUImageGaussianBlurFilter alloc] init];
+    filter6.blurRadiusInPixels = 100.0;
+    [imagePicture addTarget:filter6];
+    [imagePicture processImage];
+    return [filter6 imageFromCurrentlyProcessedOutput];
+    
+    
+    GPUImagePicture *imagePicture = [[GPUImagePicture alloc] initWithImage:inputImage];
+    GPUImageGaussianBlurFilter* filter0 = [[GPUImageGaussianBlurFilter alloc] init];
+    GPUImageGaussianBlurFilter* filter1 = [[GPUImageGaussianBlurFilter alloc] init];
+    GPUImageGaussianBlurFilter* filter2 = [[GPUImageGaussianBlurFilter alloc] init];
+    GPUImageGaussianBlurFilter* filter3 = [[GPUImageGaussianBlurFilter alloc] init];
+    GPUImageGaussianBlurFilter* filter4 = [[GPUImageGaussianBlurFilter alloc] init];
+    GPUImageGaussianBlurFilter* filter5 = [[GPUImageGaussianBlurFilter alloc] init];
+    GPUImageGaussianBlurFilter* filter6 = [[GPUImageGaussianBlurFilter alloc] init];
+    GPUImageGaussianBlurFilter* filter7 = [[GPUImageGaussianBlurFilter alloc] init];
+    GPUImageGaussianBlurFilter* filter8 = [[GPUImageGaussianBlurFilter alloc] init];
+    GPUImageGaussianBlurFilter* filter9 = [[GPUImageGaussianBlurFilter alloc] init];
+    filter0.blurRadiusInPixels = 1.0;
+    filter1.blurRadiusInPixels = 1.0;
+    filter2.blurRadiusInPixels = 1.0;
+    filter3.blurRadiusInPixels = 1.0;
+    filter4.blurRadiusInPixels = 1.0;
+    filter5.blurRadiusInPixels = 1.0;
+    filter6.blurRadiusInPixels = 1.0;
+    filter7.blurRadiusInPixels = 1.0;
+    filter8.blurRadiusInPixels = 1.0;
+    filter9.blurRadiusInPixels = 1.0;
+    [imagePicture addTarget:filter0];
+    [filter0 addTarget:filter1];
+    [filter1 addTarget:filter2];
+    [filter2 addTarget:filter3];
+    [filter3 addTarget:filter4];
+    [filter4 addTarget:filter5];
+    [filter5 addTarget:filter6];
+    [filter6 addTarget:filter7];
+    [filter7 addTarget:filter8];
+    [filter8 addTarget:filter9];
+    [imagePicture processImage];
+    return [filter6 imageFromCurrentlyProcessedOutput];
+     */
+    
+    
+    int width = (int)CGImageGetWidth(inputImage.CGImage);
+    int height = (int)CGImageGetHeight(inputImage.CGImage);
+    size_t bitsPerComponent = CGImageGetBitsPerComponent(inputImage.CGImage);
+    size_t bitsPerPixel = CGImageGetBitsPerPixel(inputImage.CGImage);
+    size_t bytesPerRow = CGImageGetBytesPerRow(inputImage.CGImage);
+    CGColorSpaceRef colorSpace = CGImageGetColorSpace(inputImage.CGImage);
+    CGBitmapInfo bitmapInfo = CGImageGetBitmapInfo(inputImage.CGImage);
+    BOOL shouldInterpolate = CGImageGetShouldInterpolate(inputImage.CGImage);
+    CGColorRenderingIntent intent = CGImageGetRenderingIntent(inputImage.CGImage);
+    
+    // データプロバイダを取得する
+    CGDataProviderRef dataProvider = CGImageGetDataProvider(inputImage.CGImage);
+    
+    // ビットマップデータを取得する
+    CFDataRef data = CGDataProviderCopyData(dataProvider);
+    CFMutableDataRef mutableData = CFDataCreateMutableCopy(0, 0, data);
+    
+    UInt8* buffer = (UInt8*)CFDataGetMutableBytePtr(mutableData);
+    int i, j;
+    UInt8* pixel;
+    NSDate* start = [NSDate date];
+    
+    double r, g, b, _r, _g, _b, ev0, ev2, ev4, ev_2, ev_4, ev_8, exp0, exp2, exp4, exp8, exp_2, exp_4;
+    
+    exp0 = 1.0;
+    exp2 = 0.5;
+    exp4 = 0.25;
+    exp_2 = 2.0;
+    exp_4 = 4.0;
+    
+    double lum, _lum, alpha;
+    double tmp;
+    double *result = (double*)malloc(sizeof(double) * width * height);
+    double *radiances = (double*)malloc(sizeof(double) * width * height * 4);
+    double *g_div = (double*)malloc(sizeof(double) * width * height);
+    double* phis = (double*)malloc(sizeof(double) * width * height);
+    double *radiances_pixel;
+    double *lum_delta;
+    int radiance_index;
+    double max_lum = 0.0;
+    
+    double max_pixel_value = (1.0 + 1.0 / exp2 + 1.0 / exp4 + 1.0 / exp_2 + 1.0 / exp_4) / 3.0;
+    double min_pixel_value = 0.0;
+    double lw;
+    double lw_global;
+    double l_white = 0.0;
+    double lw_sum = 0.0;
+    double w0, w1, w2, w3, w4;
+    double set[3] = {0.0, 0.0, 0.0};
+    
+    YUV yuv;
+    RGB rgb;
+
+    
+    for (j = 0 ; j < height; j++)
+    {
+        for (i = 0; i < width; i++)
+        {
+            // ピクセルのポインタを取得する
+            pixel = buffer + j * bytesPerRow + i * 4;
+            radiance_index = (j * width) * 4 + i * 4;
+            //lum = pixel2luminance(pixel) / 255;
+            
+            
+            r = (double)*(pixel + 0) / 255.0;
+            g = (double)*(pixel + 1) / 255.0;
+            b = (double)*(pixel + 2) / 255.0;
+            
+            set[0] = r;
+            set[1] = g;
+            set[2] = b;
+            
+            for(int i = 0;i < 3;i++){
+                ev0 = set[i];
+                ev2 = ev0 * ev0;
+                ev4 = ev2 * ev2;
+                ev_2 = ev0;
+                screen(&ev_2);
+                ev_4 = ev_2;
+                screen(&ev_4);
+                
+                ev2 /= exp2;
+                ev4 /= exp4;
+                ev_2 /= exp_2;
+                ev_4 /= exp_4;
+                //w0 = ev_4 - ev4;
+                //tmp = r + w0 * (ev2 + ev4 + ev_2 + ev_4) / 4.0;
+                tmp = (ev0 + ev2 + ev4 + ev_2 + ev_4) / 5.0;
+                radiances[radiance_index + i] = tmp;
+            }
+            
+            lum = rgb2luminance(radiances[radiance_index], radiances[radiance_index + 1], radiances[radiance_index + 2]);
+            lw_sum += log(0.0001 + lum);
+            if(lum > l_white){
+                l_white = lum;
+            }
+            radiances[radiance_index + 3] = log(lum + 0.0001);
+        }
+    }
+    
+    NSLog(@"called phis.");
+    calcphis(phis, radiances, width, height, 0.1, 0.8);
+    NSLog(@"called gradiant.");
+    gradient(g_div, radiances, phis, width, height);
+    free(phis);
+    NSLog(@"called gassb.");
+    gaussb(result, radiances, g_div, width, height);
+    free(g_div);
+    NSLog(@"called expall.");
+    expall(result, radiances, width, height);
+
+    
+    double s = 0.6;
+    alpha = 0.3;
+    
+    
+    for (int j = 1 ; j < height - 1; j++)
+    {
+        for (int i = 1; i < width - 1; i++)
+        {
+            radiance_index = (j * width) * 4 + i * 4;
+            pixel = buffer + j * bytesPerRow + i * 4;
+            
+            tmp = result[j * width + i] / 1.0;
+            
+            
+            rgb.r = pow(radiances[radiance_index + 0] / radiances[radiance_index + 3], s) * tmp;
+            rgb.g = pow(radiances[radiance_index + 1] / radiances[radiance_index + 3], s) * tmp;
+            rgb.b = pow(radiances[radiance_index + 2] / radiances[radiance_index + 3], s) * tmp;
+            
+            
+            
+            // Soft Light
+            tmp = (double)*(pixel) / 255.0;
+            tmp = rgb.r * alpha + (1.0 - alpha) * tmp;
+            if(rgb.r < 0.5){
+                rgb.r = pow(tmp, (1.0 - rgb.r) / 0.5);
+            }else{
+                rgb.r = pow(tmp, 0.5 / rgb.r);
+            }
+            tmp = (double)*(pixel + 1) / 255.0;
+            tmp = rgb.g * alpha + (1.0 - alpha) * tmp;
+            if(rgb.g < 0.5){
+                rgb.g = pow(tmp, (1.0 - rgb.g) / 0.5);
+            }else{
+                rgb.g = pow(tmp, 0.5 / rgb.g);
+            }
+            tmp = (double)*(pixel + 2) / 255.0;
+            tmp = rgb.b * alpha + (1.0 - alpha) * tmp;
+            if(rgb.b < 0.5){
+                rgb.b = pow(tmp, (1.0 - rgb.b) / 0.5);
+            }else{
+                rgb.b = pow(tmp, 0.5 / rgb.b);
+            }
+             
+            
+            
+            
+            /*
+             // Hard light
+             tmp = (double)*(pixel) / 255.0;
+             if(rgb.r < 0.5){
+             rgb.r = tmp * rgb.r * 2.0;
+             }else{
+             rgb.r = 2.0 * (rgb.r + tmp - tmp * rgb.r) - 1.0;
+             }
+             tmp = (double)*(pixel + 1) / 255.0;
+             if(rgb.g < 0.5){
+             rgb.g = tmp * rgb.g * 2.0;
+             }else{
+             rgb.g = 2.0 * (rgb.g + tmp - tmp * rgb.g) - 1.0;
+             }
+             tmp = (double)*(pixel + 2) / 255.0;
+             if(rgb.b < 0.5){
+             rgb.b = tmp * rgb.b * 2.0;
+             }else{
+             rgb.b = 2.0 * (rgb.b + tmp - tmp * rgb.b) - 1.0;
+             }
+             */
+            
+            
+            
+            
+            //rgb.r = rgb.g = rgb.b = exp(gausian_pyramids[width * height * 4 + j * width + i]);
+            //rgb.r = rgb.g = rgb.b = result[j * width + i];
+            
+            *(pixel) = (int)MAX(MIN(round(rgb.r * 255.0), 255.0), 0.0);
+            *(pixel + 1) = (int)MAX(MIN(round(rgb.g * 255.0), 255.0), 0.0);
+            *(pixel + 2) = (int)MAX(MIN(round(rgb.b * 255.0), 255.0), 0.0);
+        }
+    }
+
+    free(result);
+    free(radiances);
+    
+    // do stuff...
+    NSTimeInterval timeInterval = [start timeIntervalSinceNow];
+    NSLog(@"time:%lf", -timeInterval);
+    
+    
+    // 効果を与えたデータを作成する
+    CFDataRef effectedData;
+    effectedData = CFDataCreate(NULL, buffer, CFDataGetLength(mutableData));
+    CFRelease(mutableData);
+    CFRelease(data);
+    
+    // 効果を与えたデータプロバイダを作成する
+    CGDataProviderRef effectedDataProvider;
+    effectedDataProvider = CGDataProviderCreateWithCFData(effectedData);
+    
+    // 画像を作成する
+    CGImageRef effectedCgImage = CGImageCreate(
+                                               width, height,
+                                               bitsPerComponent, bitsPerPixel, bytesPerRow,
+                                               colorSpace, bitmapInfo, effectedDataProvider,
+                                               NULL, shouldInterpolate, intent);
+    
+    
+    resultImage = [[UIImage alloc] initWithCGImage:effectedCgImage];
+    
+    // 作成したデータを解放する
+    CGImageRelease(effectedCgImage);
+    CFRelease(effectedDataProvider);
+    CFRelease(effectedData);
+    return resultImage;
 }
 
 
@@ -740,6 +1134,8 @@ double absd(double value)
              g_div[j * width + i] += h_nabla[j * width * 2 + i * 2 + 0] - h_nabla[j * width * 2 + (i - 1) * 2 + 0];
              g_div[j * width + i] += h_nabla[j * width * 2 + i * 2 + 1] - h_nabla[(j - 1) * width * 2 + i * 2 + 1];
              */
+            
+            result[j * width + i] = 0.0;
         }
     }
     
@@ -750,12 +1146,102 @@ double absd(double value)
     double max_err = 0.0;
     int updated = 1;
     bool cflag = true;
+    int I, J;
+    
+    int widthDiv2 = ceil((double)width / 2.0);
+    int heightDiv2 = ceil((double)height / 2.0);
+    
+    double* D = malloc(sizeof(double) * width * height);
+    double* D1 = malloc(sizeof(double) * widthDiv2 * heightDiv2);
+    double* R1 = malloc(sizeof(double) * widthDiv2 * heightDiv2);
     
     
-    while (threshold > 0.0001) {
+    while (threshold > 0.001) {
         threshold /= 10.0;
         NSLog(@"threshold:%lf", threshold);
         updated = 1;
+        I = 0;
+        J = 0;
+        for (int j = 2 ; j < height - 2; j += 2)
+        {
+            for (int i = 2; i < width - 2; i += 2)
+            {
+                R1[J * widthDiv2 + I] = result[j * width + i] + (result[j * width + i - 1] + result[j * width + i + 1] + result[(j - 1) * width + i] + result[(j + 1) * width + i]) / 2.0 + (result[(j + 1) * width + i - 1] + result[(j - 1) * width + i] + result[(j - 1) * width - i] + result[(j + 1) * width + i]) / 4.0;
+                D1[J * widthDiv2 + I] = 0.0;
+                D[j * width + i] = 0.0;
+                I++;
+            }
+            J++;
+            I = 0;
+        }
+        while (updated > 0) {
+            updated = 0;
+            I = 1;
+            J = 1;
+            for (int j = 0 ; j < height; j += 2)
+            {
+                if(J >= heightDiv2 - 1){
+                    continue;
+                }
+                for (int i = 0; i < width; i += 2)
+                {
+                    if(I >= widthDiv2 - 1){
+                        continue;
+                    }
+                    prev_i = D1[J * widthDiv2 + I];
+                    D1[J * widthDiv2 + I] = 0.25 * (R1[J * widthDiv2 + I] + D1[J * widthDiv2 + I - 1] + D1[J * widthDiv2 + I + 1] + D1[(J + 1) * widthDiv2 + I] + D1[(J - 1) * widthDiv2 + I] - g_div[j * width + i]);
+                    D[j * width + i] = D1[J * widthDiv2 + I];
+                    if(absd(D1[J * widthDiv2 + I]) > max_i){
+                        max_i = absd(D1[J * widthDiv2 + I]);
+                    }
+                    current_err = absd(prev_i - D1[J * widthDiv2 + I]) / max_i;
+                    if(current_err > threshold){
+                        updated++;
+                    }else{
+                    }
+                    I++;
+                }
+                J++;
+                I = 1;
+            }
+            NSLog(@"D1:Updated:%d", updated);
+
+        }
+        int i, j;
+        for(int ii = 1;ii < widthDiv2;ii++){
+            i = 2 * ii;
+            D[1 * width + i] = (3.0 * D[0 * width + i] + 6.0 * D[2 * width + i] - D[4 * width + i]) / 8.0;
+            for (j = 3; j < height - 3; j += 2)
+            {
+                D[j * width + i] = (9.0 * D[(j - 1) * width + i] + 9.0 * D[(j + 1) * width + i] - D[(j - 3) * width + i] - D[(j + 3) * width + i]) / 16.0;
+            }
+            j--;
+            if(j % 2 == 0){
+                j += 1;
+            }else{
+                j += 2;
+            }
+            D[j * width + i] = (3.0 * D[(j + 1) * width + i] + 6.0 * D[(j - 1) * width + i] - D[(j - 3) * width + i]) / 8.0;
+        }
+        for (int j = 0 ; j < height; j++)
+        {
+            i = 3;
+            D[j * width + 1] = (3.0 * D[j * width + 0] + 6.0 * D[j * width + 2] - D[j * width + 4]) / 8.0;
+            for (i = 3; i < width - 3; i += 2)
+            {
+                D[j * width + i] = (9.0 * D[j * width + i - 1] + 9.0 * D[j * width + i + 1] - D[j * width + i - 3] - D[j * width + i + 3]) / 16.0;
+            }
+            i--;
+            if(i % 2 == 0){
+                i += 1;
+            }else{
+                i += 2;
+            }
+            D[j * width + i] = (3.0 * D[j * width + i + 1] + 6.0 * D[j * width + i - 1] - D[j * width + i - 3]) / 8.0;
+        }
+
+        updated = 1;
+        max_i = 0.0;
         cflag = !cflag;
         while (updated > 0) {
             updated = 0;
@@ -764,14 +1250,12 @@ double absd(double value)
                 for (int i = 1; i < width - 1; i++)
                 {
                     if(flags[j * width + i] == cflag){
-                        //continue;
+                        continue;
                     }
-
+                    
                     prev_i = result[j * width + i];
                     result[j * width + i] = 0.25 * (result[j * width + i + 1] + result[j * width + i - 1] + result[(j + 1) * width + i] + result[(j - 1) * width + i] - g_div[j * width + i]);
-                    
-                    result[j * width + i] = prev_i + 1.25 * (result[j * width + i] - prev_i);
-                    
+                    //result[j * width + i] = prev_i + 1.25 * (result[j * width + i] - prev_i);
                     if(absd(result[j * width + i]) > max_i){
                         max_i = absd(result[j * width + i]);
                     }
@@ -784,6 +1268,10 @@ double absd(double value)
                         flags[j * width + i + 1] = !cflag;
                         flags[(j + 1) * width + i] = !cflag;
                         flags[(j - 1) * width + i] = !cflag;
+                        flags[(j + 1) * width + i + 1] = !cflag;
+                        flags[(j + 1) * width + i - 1] = !cflag;
+                        flags[(j - 1) * width + i + 1] = !cflag;
+                        flags[(j - 1) * width + i - 1] = !cflag;
                     }else{
                         flags[j * width + i] = cflag;
                     }
@@ -791,7 +1279,22 @@ double absd(double value)
             }
             NSLog(@"Updated:%d", updated);
         }
+        
+        
+        for (int j = 1 ; j < height - 1; j++)
+        {
+            for (int i = 1; i < width - 1; i++)
+            {
+                result[j * width + i] += D[j * width + i + 1] + D[j * width + i - 1] + D[(j + 1) * width + i] + D[(j - 1) * width + i] - 4.0 * D[j * width + i];
+                D[j * width + i] += result[j * width + i] / 4.0;
+            }
+        }
+        
     }
+    
+    free(R1);
+    free(D1);
+    free(D);
     
     NSLog(@"max_phi:%lf", max_phi);
     NSLog(@"min_phi:%lf", min_phi);
@@ -915,7 +1418,7 @@ double absd(double value)
             rgb.b = pow(radiances[radiance_index + 2] / radiances[radiance_index + 3], s) * tmp;
             
             
-            /*
+            
             // Soft Light
             tmp = (double)*(pixel) / 255.0;
             tmp = rgb.r * alpha + (1.0 - alpha) * tmp;
@@ -938,7 +1441,7 @@ double absd(double value)
             }else{
                 rgb.b = pow(tmp, 0.5 / rgb.b);
             }
-             */
+            
             
             
             /*
