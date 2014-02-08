@@ -29,6 +29,7 @@
 		580C4B8F188B7D3800FF5637 /* GPUGaussSeidelFilter.m in Sources */ = {isa = PBXBuildFile; fileRef = 580C4B8E188B7D3800FF5637 /* GPUGaussSeidelFilter.m */; };
 		58F037B1188AC66400BB28F3 /* GPUFattalFilter.m in Sources */ = {isa = PBXBuildFile; fileRef = 58F037B0188AC66400BB28F3 /* GPUFattalFilter.m */; };
 		58F037B2188AC86D00BB28F3 /* libGPUImage.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 58F037AA188AB44E00BB28F3 /* libGPUImage.a */; };
+		58FC64C418A65693002FBCB5 /* ipad.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 58FC64C318A65693002FBCB5 /* ipad.jpg */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -85,6 +86,7 @@
 		58F037A3188AB44E00BB28F3 /* GPUImage.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = GPUImage.xcodeproj; path = GPUImage/framework/GPUImage.xcodeproj; sourceTree = "<group>"; };
 		58F037AF188AC66400BB28F3 /* GPUFattalFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GPUFattalFilter.h; sourceTree = "<group>"; };
 		58F037B0188AC66400BB28F3 /* GPUFattalFilter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GPUFattalFilter.m; sourceTree = "<group>"; };
+		58FC64C318A65693002FBCB5 /* ipad.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = ipad.jpg; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -156,6 +158,7 @@
 		58066339188A9BE000F97D42 /* HDRtest */ = {
 			isa = PBXGroup;
 			children = (
+				58FC64C318A65693002FBCB5 /* ipad.jpg */,
 				580C4B8D188B7D3800FF5637 /* GPUGaussSeidelFilter.h */,
 				580C4B8E188B7D3800FF5637 /* GPUGaussSeidelFilter.m */,
 				58F037AF188AC66400BB28F3 /* GPUFattalFilter.h */,
@@ -309,6 +312,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5806634C188A9BE000F97D42 /* Images.xcassets in Resources */,
+				58FC64C418A65693002FBCB5 /* ipad.jpg in Resources */,
 				5806633E188A9BE000F97D42 /* InfoPlist.strings in Resources */,
 				58066347188A9BE000F97D42 /* Main.storyboard in Resources */,
 			);

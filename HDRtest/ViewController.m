@@ -77,13 +77,6 @@
         
     }    else{
         
-        GPUDefaultFilter* adjustment = [[GPUDefaultFilter alloc] init];
-        
-        GPUImagePicture* picture = [[GPUImagePicture alloc] initWithImage:self.loadedImage];
-        [picture addTarget:adjustment];
-        
-        [picture processImage];
-        result = [adjustment imageFromCurrentlyProcessedOutput];
 
     }
     
@@ -185,6 +178,14 @@ typedef struct
     double g;
     double b;
 } RGB;
+
+typedef struct
+{
+    double r;
+    double g;
+    double b;
+    double a;
+} RGBA;
 
 typedef struct
 {
@@ -411,9 +412,71 @@ void calcphis(double* phis, double* radiances, int width, int height, double alp
 
 }
 
+RGBA double2RGBA(double value){
+    
+    
+    double tmp;
+    double max = 4294967296.0;
+    RGBA rgba = {0, 0, 0, 0};
+    value *= max;
+    //value = floor(value);
+    tmp = floor(value / 256.0);
+    rgba.r = (value - tmp * 256.0) / 255.0;
+    value = tmp;
+    
+    tmp = floor(value / 256.0);
+    rgba.g = (value - tmp * 256.0) / 255.0;
+    value = tmp;
+    
+    tmp = floor(value / 256.0);
+    rgba.b = (value - tmp * 256.0) / 255.0;
+    value = tmp;
+
+    rgba.a = value / 255.0;
+    return rgba;
+}
+
+double RGBA2double(RGBA rgba){
+    double tmp = 0.0;
+    tmp += rgba.a * 0.99609375;
+    tmp += rgba.b * 0.0038909912109375;
+    tmp += rgba.g * 0.000015199184417724609375;
+    tmp += rgba.r * 0.00000005937181413173675537109375;
+    return tmp;
+    return (rgba.a * 256.0 * 256.0 * 256.0 * 255.0 + rgba.b * 256 * 256.0 * 255.0 + rgba.g * 256 * 255.0 + rgba.r * 255.0) / (256.0 * 256.0 * 256.0 * 256.0);
+}
+
 - (UIImage *)hdrWithInputImage:(UIImage *)inputImage
 {
+    
+    
+    {
+        double value = 5.0;
+        value /= 10.0;
+        RGBA rgba = double2RGBA(value);
+        double result = RGBA2double(rgba);
+        rgba = double2RGBA(result);
+        result = RGBA2double(rgba);
+        NSLog(@"input %lf, rgba:%lf %lf %lf %lf", value, rgba.a, rgba.b, rgba.g, rgba.r);
+        NSLog(@"%lf", result);
+        double err = result - value;
+        NSLog(@"Err10:%lf", err * 1000000000);
+    }
+    
+    return inputImage;
+     
+     
+    
     UIImage* resultImage;
+    GPUImagePicture *imagePicture = [[GPUImagePicture alloc] initWithImage:inputImage];
+    GPUImagePicture *imagePicture2 = [[GPUImagePicture alloc] initWithImage:[UIImage imageNamed:@"ipad.jpg"]];
+    GPUGaussSeidelFilter* gaussSeidel = [[GPUGaussSeidelFilter alloc] init];
+    gaussSeidel.numIterations = 2;
+    [imagePicture addTarget:gaussSeidel];
+    [imagePicture2 addTarget:gaussSeidel atTextureLocation:1];
+    [imagePicture processImage];
+    [imagePicture2 processImage];
+    return [gaussSeidel imageFromCurrentlyProcessedOutput];
     
     /*
     GPUImagePicture *imagePicture = [[GPUImagePicture alloc] initWithImage:inputImage];

@@ -11,6 +11,7 @@
 #import "GPUImage.h"
 #import "GPUGaussSeidelFilter.h"
 #import "GPUFattalFilter.h"
+#import "GPUImagePoissonBlendFilter.h"
 
 @interface ViewController : UIViewController <UINavigationControllerDelegate, UIImagePickerControllerDelegate>
 
