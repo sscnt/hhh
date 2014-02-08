@@ -414,25 +414,24 @@ void calcphis(double* phis, double* radiances, int width, int height, double alp
 
 RGBA double2RGBA(double value){
     
-    
     double tmp;
-    double max = 4294967296.0;
     RGBA rgba = {0, 0, 0, 0};
-    value *= max;
+    //value *= max;
     //value = floor(value);
-    tmp = floor(value / 256.0);
-    rgba.r = (value - tmp * 256.0) / 255.0;
-    value = tmp;
+    tmp = floor(value / 0.00390625);
+    rgba.a = tmp / 255.0;
+    value -= tmp * 0.00390625;
     
-    tmp = floor(value / 256.0);
-    rgba.g = (value - tmp * 256.0) / 255.0;
-    value = tmp;
+    tmp = floor(value / 0.0000152587890625);
+    rgba.b = tmp / 255.0;
+    value -= tmp * 0.0000152587890625;
     
-    tmp = floor(value / 256.0);
-    rgba.b = (value - tmp * 256.0) / 255.0;
-    value = tmp;
-
-    rgba.a = value / 255.0;
+    tmp = floor(value / 0.000000059604644775390625);
+    rgba.g = tmp / 255.0;
+    value -= tmp * 0.000000059604644775390625;
+    
+    tmp = floor(value / 0.00000000023283064365386962890625);
+    rgba.r = tmp / 255.0;
     return rgba;
 }
 
@@ -449,9 +448,24 @@ double RGBA2double(RGBA rgba){
 - (UIImage *)hdrWithInputImage:(UIImage *)inputImage
 {
     
+    int range[2], precision;
+    glGetShaderPrecisionFormat(GL_FRAGMENT_SHADER, GL_HIGH_FLOAT, range, &precision);
     
+    /*
+    for (int i = 0; i < 10000; i++) {
+        
+        double value = (double)i / 10000;
+        RGBA rgba = double2RGBA(value);
+        double result = RGBA2double(rgba);
+        rgba = double2RGBA(result);
+        result = RGBA2double(rgba);
+        double err = result - value;
+
+            NSLog(@"%lf -> %lf", value, result);
+     
+    }
     {
-        double value = 5.0;
+        double value = 9.9999999976;
         value /= 10.0;
         RGBA rgba = double2RGBA(value);
         double result = RGBA2double(rgba);
@@ -464,7 +478,7 @@ double RGBA2double(RGBA rgba){
     }
     
     return inputImage;
-     
+     */
      
     
     UIImage* resultImage;

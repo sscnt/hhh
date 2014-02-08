@@ -39,22 +39,34 @@ NSString *const kGPUGaussSeidelFilterFragmentShaderString = SHADER_STRING
  
  highp vec4 float2rgba(in float value){
      highp float tmp;
-     highp float max = 4294967296.0;
-     value *= max;
      highp vec4 rgba = vec4(0.0, 0.0, 0.0, 0.0);
-     tmp = floor(value / 256.0);
-     rgba.r = (value - tmp * 256.0) / 255.0;
-     value = tmp;
+     tmp = floor(value / 0.00390625);
+     rgba.a = tmp / 255.0;
+     value -= tmp * 0.00390625;
      
-     tmp = floor(value / 256.0);
-     rgba.g = (value - tmp * 256.0) / 255.0;
-     value = tmp;
+     tmp = floor(value / 0.0000152587890625);
+     rgba.b = tmp / 255.0;
+     value -= tmp * 0.0000152587890625;
      
-     tmp = floor(value / 256.0);
-     rgba.b = (value - tmp * 256.0) / 255.0;
-     value = tmp;
+     tmp = floor(value / 0.000000059604644775390625);
+     rgba.g = tmp / 255.0;
+     value -= tmp * 0.000000059604644775390625;
      
-     rgba.a = value / 255.0;
+     tmp = floor(value / 0.00000000023283064365386962890625);
+     rgba.r = tmp / 255.0;
+     
+     if(rgba.r > 1.0){
+         rgba.r = 1.0;
+     }
+     if(rgba.g > 1.0){
+         rgba.g = 1.0;
+     }
+     if(rgba.b > 1.0){
+         rgba.b = 1.0;
+     }
+     if(rgba.a > 1.0){
+         rgba.a = 1.0;
+     }
      return rgba;
  }
  
@@ -74,27 +86,10 @@ NSString *const kGPUGaussSeidelFilterFragmentShaderString = SHADER_STRING
 
      
      highp float tmp = rgba2float(centerColor);
-     highp vec4 rgba = float2rgba(0.99999998876);
+     highp float unko = 0.99999999788;
+     highp vec4 rgba = float2rgba(tmp);
      
 	 gl_FragColor = rgba;
-     
-     
-     highp float max = 65536.0;
-     highp float value = 0.99999999976;
-     value *= max;
-     rgba = vec4(0.0, 0.0, 0.0, 0.0);
-     tmp = floor(value / 256.0);
-     rgba.r = (value - tmp * 256.0) / 255.0;
-     if(value > 4294967294.0){
-         gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-         if(tmp > 16777214.0){
-             gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);
-             if(rgba.r > 0.8){
-                 gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-                 
-             }
-         }
-     }
      
      
  }
