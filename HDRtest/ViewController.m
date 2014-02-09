@@ -445,25 +445,64 @@ double RGBA2double(RGBA rgba){
     return (rgba.a * 256.0 * 256.0 * 256.0 * 255.0 + rgba.b * 256 * 256.0 * 255.0 + rgba.g * 256 * 255.0 + rgba.r * 255.0) / (256.0 * 256.0 * 256.0 * 256.0);
 }
 
+RGBA addRGBA(RGBA a, RGBA b){
+    double tmp;
+    double up = 0.00390625;
+    double upword = 0.0;
+    RGBA r;
+    tmp = a.r + b.r;
+    if(tmp > 1.0){
+        r.r = tmp - 1.0;
+        upword = up;
+    }else{
+        r.r = tmp;
+    }
+    tmp = a.g + b.g + upword;
+    upword = 0.0;
+    if(tmp > 1.0){
+        r.g = tmp - 1.0;
+        upword = up;
+    }else{
+        r.g = tmp;
+    }
+    tmp = a.b + b.b + upword;
+    upword = 0.0;
+    if(tmp > 1.0){
+        r.b = tmp - 1.0;
+        upword = up;
+    }else{
+        r.b = tmp;
+    }
+    tmp = a.a + b.a + upword;
+    upword = 0.0;
+    if(tmp > 1.0){
+        r.a = tmp - 1.0;
+        upword = up;
+    }else{
+        r.a = tmp;
+    }
+
+    return r;
+}
+
 - (UIImage *)hdrWithInputImage:(UIImage *)inputImage
 {
-    
-    int range[2], precision;
-    glGetShaderPrecisionFormat(GL_FRAGMENT_SHADER, GL_HIGH_FLOAT, range, &precision);
-    
-    /*
+
     for (int i = 0; i < 10000; i++) {
         
-        double value = (double)i / 10000;
-        RGBA rgba = double2RGBA(value);
-        double result = RGBA2double(rgba);
-        rgba = double2RGBA(result);
-        result = RGBA2double(rgba);
-        double err = result - value;
+        double value = (double)i / 10000000;
+        double unko = value / 2.0;
+        RGBA v = double2RGBA(value);
+        RGBA u = double2RGBA(unko);
+        RGBA r = addRGBA(v, u);
+        double result = RGBA2double(r);
+        double tmp = value + unko;
+        double err = result - tmp;
 
-            NSLog(@"%lf -> %lf", value, result);
+        NSLog(@"%lf -> %lf", tmp, result);
      
     }
+    /*
     {
         double value = 9.9999999976;
         value /= 10.0;
@@ -477,9 +516,9 @@ double RGBA2double(RGBA rgba){
         NSLog(@"Err10:%lf", err * 1000000000);
     }
     
-    return inputImage;
      */
-     
+
+    return inputImage;
     
     UIImage* resultImage;
     GPUImagePicture *imagePicture = [[GPUImagePicture alloc] initWithImage:inputImage];
