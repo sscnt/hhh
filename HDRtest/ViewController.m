@@ -317,6 +317,7 @@ void gradient(double* g_div, double* radiances, double* phis, int width, int hei
             lum = radiances[(j * width) * 4 + i * 4 + 3];
 
             phi = phis[j * width + i];
+            phi = 1.0;
             
             g_div[j * width + i] += phi * (radiances[j * width * 4 + (i - 1) * 4 + 3] + radiances[j * width * 4 + (i + 1) * 4 + 3] - 2.0 * lum);
             g_div[j * width + i] += phi * (radiances[(j - 1) * width * 4 + i * 4 + 3] + radiances[(j + 1) * width * 4 + i * 4 + 3] - 2.0 * lum);
@@ -324,7 +325,7 @@ void gradient(double* g_div, double* radiances, double* phis, int width, int hei
     }
 }
 
-void gaussb(double* result, double* radiances, double* g_div, int width, int height){
+void gaussb_(double* result, double* g_div, int width, int height){
     
     bool cflag = true;
     bool* flags = (bool*)malloc(sizeof(bool) * width * height);
@@ -412,14 +413,18 @@ void calcphis(double* phis, double* radiances, int width, int height, double alp
 
 }
 
-RGBA double2RGBA(double value){
-    
+RGBA double2RGBA(double input){
+    double value = absd(input) / 2.0;
     double tmp;
     RGBA rgba = {0, 0, 0, 0};
     //value *= max;
     //value = floor(value);
     tmp = floor(value / 0.00390625);
+    
     rgba.a = tmp / 255.0;
+    if(input < 0.0){
+        rgba.a += 128.0/255.0;
+    }
     value -= tmp * 0.00390625;
     
     tmp = floor(value / 0.0000152587890625);
@@ -437,12 +442,17 @@ RGBA double2RGBA(double value){
 
 double RGBA2double(RGBA rgba){
     double tmp = 0.0;
+    double sign = 1.0;
+    if (rgba.a >= 128.0/255.0) {
+        sign = -1.0;
+        rgba.a -= 128.0/255.0;
+    }
     tmp += rgba.a * 0.99609375;
     tmp += rgba.b * 0.0038909912109375;
     tmp += rgba.g * 0.000015199184417724609375;
     tmp += rgba.r * 0.00000005937181413173675537109375;
-    return tmp;
-    return (rgba.a * 256.0 * 256.0 * 256.0 * 255.0 + rgba.b * 256 * 256.0 * 255.0 + rgba.g * 256 * 255.0 + rgba.r * 255.0) / (256.0 * 256.0 * 256.0 * 256.0);
+    //return tmp;
+    return sign * (rgba.a * 256.0 * 256.0 * 256.0 * 255.0 + rgba.b * 256 * 256.0 * 255.0 + rgba.g * 256 * 255.0 + rgba.r * 255.0) / (256.0 * 256.0 * 256.0 * 128.0);
 }
 
 RGBA addRGBA(RGBA a, RGBA b){
@@ -451,46 +461,242 @@ RGBA addRGBA(RGBA a, RGBA b){
     double upword = 0.0;
     RGBA r;
     tmp = a.r + b.r;
-    if(tmp > 1.0){
+    tmp *= 0.99609375;
+    if(tmp > 0.99609375){
         r.r = tmp - 1.0;
         upword = up;
     }else{
         r.r = tmp;
     }
-    tmp = a.g + b.g + upword;
+    tmp = a.g + b.g;
+    tmp *= 0.99609375;
+    tmp += upword;
     upword = 0.0;
-    if(tmp > 1.0){
+    if(tmp > 0.99609375){
         r.g = tmp - 1.0;
         upword = up;
     }else{
         r.g = tmp;
     }
-    tmp = a.b + b.b + upword;
+    tmp = a.b + b.b;
+    tmp *= 0.99609375;
+    tmp += upword;
     upword = 0.0;
-    if(tmp > 1.0){
+    if(tmp > 0.99609375){
         r.b = tmp - 1.0;
         upword = up;
     }else{
         r.b = tmp;
     }
-    tmp = a.a + b.a + upword;
+    tmp = a.a + b.a;
+    tmp *= 0.99609375;
+    tmp += upword;
     upword = 0.0;
-    if(tmp > 1.0){
+    if(tmp > 0.99609375){
         r.a = tmp - 1.0;
         upword = up;
     }else{
         r.a = tmp;
     }
-
+    
+    r.a /= 0.99609375;
+    r.b /= 0.99609375;
+    r.g /= 0.99609375;
+    r.r /= 0.99609375;
     return r;
+}
+
+void restrc(double* r1, int i1, int j1, double* r2, int i2, int j2){
+    int i, j;
+    for(int ii = 1; ii <= i2 - 1;ii++){
+        i = 2 * ii;
+        for (int jj = 1; jj <= j2 - 1; jj++) {
+            j = 2 * jj;
+            r2[jj * i2 + ii] = r1[j * i1 + i] + (r1[j * i1 + i - 1] +r1[j * i1 + i + 1] +r1[(j - 1) * i1 + i] +r1[(j + 1) * i1 + i]) / 2.0 + (r1[(j + 1) * i1 + i - 1] +r1[(j - 1) * i1 + i + 1] +r1[(j - 1) * i1 + i - 1] +r1[(j + 1) * i1 + i + 1]) / 4.0;
+        }
+    }
+}
+
+void prolon(double* d2, int i2, int j2, double* d1, int i1, int j1){
+    for (int i = 1; i <= i2 - 1; i++) {
+        for (int j = 1; j <= j2 - 1; j++) {
+            d1[2 * j * i1 + 2 * i] = d2[j * i2 + i];
+        }
+    }
+    int i;
+    for (int ii = 1; ii <= i2 - 1; ii++) {
+        i = 2 * ii;
+        d1[1 * i1 + i] = (3.0 * d1[0 * i1 + i] + 6.0 * d1[2 * i1 + i] - d1[4 * i1 + i]) / 8.0;
+        for (int j = 3; j <= j1 - 3; j += 2) {
+            d1[j * i1 + i] = (9.0 * d1[(j - 1) * i1 + i] + 9.0 * d1[(j + 1) * i1 + i] - d1[(j + 3) * i1 + i] - d1[(j - 3) * i1 + i]) / 16.0;
+        }
+        d1[(j1 - 1) * i1 + i] = (6.0 * d1[(j1 - 2) * i1 + i] + 3.0 * d1[j1 * i1 + i] - d1[(j1 - 4) * i1 + i]);
+    }
+    for (int j = 1; j <= j1 - 1; j++) {
+        d1[j * i1 + 1] = (3.0 * d1[j * i1 + 0] + 6.0 * d1[j * i1 + 2] - d1[j * i1 + 4]) / 8.0;
+        for (int i = 3; i <= i1 - 3; i += 2) {
+            d1[j * i1 + i] = (9.0 * d1[j * i1 + i - 1] + 9.0 * d1[j * i1 + i + 1] - d1[j * i1 + i + 3] - d1[j * i1 + i - 3]) / 16.0;
+        }
+        d1[j * i1 + i1 - 1] = (6.0 * d1[j * i1 + i1 - 2] + 3.0 * d1[j * i1 + i1] - d1[j * i1 + i1 - 4]);
+    }
+}
+
+void prorlx(double* d2, int i2, int j2, double* d1, int i1, int j1, double* r1){
+    for (int i = 1; i <= i2 - 1; i++) {
+        for (int j = 1; j <= j2 - 1; j++) {
+            d1[2 * j * i1 + 2 * i] = d2[j * i2 + i];
+        }
+    }
+    int i;
+    for (int ii = 1; ii <= i2 - 1; ii++) {
+        i = 2 * ii;
+        d1[1 * i1 + i] = (3.0 * d1[0 * i1 + i] + 6.0 * d1[2 * i1 + i] - d1[4 * i1 + i]) / 8.0;
+        for (int j = 3; j <= j1 - 3; j += 2) {
+            d1[j * i1 + i] = (9.0 * d1[(j - 1) * i1 + i] + 9.0 * d1[(j + 1) * i1 + i] - d1[(j + 3) * i1 + i] - d1[(j - 3) * i1 + i]) / 16.0;
+        }
+        d1[(j1 - 1) * i1 + i] =
+        (6.0 * d1[(j1 - 2) * i1 + i]
+         + 3.0 * d1[j1 * i1 + i]
+         - d1[(j1 - 4) * i1 + i]);
+    }
+    for (int j = 1; j <= j1 - 1; j++) {
+        d1[j * i1 + 1] = (3.0 * d1[j * i1 + 0] + 6.0 * d1[j * i1 + 2] - d1[j * i1 + 4]) / 8.0;
+        for (int i = 3; i <= i1 - 3; i += 2) {
+            d1[j * i1 + i] = (9.0 * d1[j * i1 + i - 1] + 9.0 * d1[j * i1 + i + 1] - d1[j * i1 + i + 3] - d1[j * i1 + i - 3]) / 16.0;
+        }
+        d1[j * i1 + i1 - 1] = (6.0 * d1[j * i1 + i1 - 2] + 3.0 * d1[j * i1 + i1] - d1[j * i1 + i1 - 4]);
+    }
+    for (int i = 1; i <= i1 - 1; i++) {
+        for(int j = 1; j <= j1 - 1;j++){
+            r1[j * i1 + i] = r1[j * i1 + i] + d1[j * i1 + i - 1] + d1[j * i1 + i + 1] + d1[(j + 1) * i1 + i] + d1[(j - 1) * i1 + i] - 4.0 * d1[j * i1 + i];
+        }
+    }
+    for (int i = 1; i <= i1 - 1; i++) {
+        for(int j = 1; j <= j1 - 1;j++){
+            d1[j * i1 + i] = d1[j * i1 + i] + r1[j * i1 + i] / 4.0;
+        }
+    }
+}
+
+void gaussb(double* r1, double* d1, double* f1, int i1, int j1){
+    int updated = 1;
+    double precision = 0.001;
+    double prev_d1;
+    while (updated > 0) {
+        updated = 0;
+        for (int j = 1 ; j <= j1 - 1; j++)
+        {
+            for (int i = 1; i <= i1 - 1; i++)
+            {
+                prev_d1 = d1[j * i1 + i];
+                d1[j * i1 + i] = 0.25 * (d1[j * i1 + i - 1] + d1[j * i1 + i + 1] + d1[(j - 1) * i1 + i] + d1[(j + 1) * i1 + i] + r1[j * i1 + i] - f1[j * i1 + i]);
+                if (absd(d1[j * i1 + i] - prev_d1) > precision) {
+                    updated++;
+                }
+            }
+        }
+        //NSLog(@"gaussb updated %d", updated);
+    }
+}
+
+void mgm2(double* u1, double* radiances, double* f1, int width, int height){
+    int i, j;
+    int i1 = width - 1;
+    int j1 = height - 1;
+    int i2 = i1 / 2;
+    int j2 = j1 / 2;
+    int i3 = i2 / 2;
+    int j3 = j2 / 2;
+    int i4 = i3 / 2;
+    int j4 = j3 / 2;
+    
+    double rmean = 1.0;
+    double tmean = 0.0001;
+    
+    double* r1 = (double*)malloc(sizeof(double) * (i1 + 1) * (j1 + 1));
+    double* r2 = (double*)malloc(sizeof(double) * (i2 + 1) * (j2 + 1));
+    double* r3 = (double*)malloc(sizeof(double) * (i3 + 1) * (j3 + 1));
+    double* r4 = (double*)malloc(sizeof(double) * (i4 + 1) * (j4 + 1));
+    double* d1 = (double*)malloc(sizeof(double) * (i1 + 1) * (j1 + 1));
+    double* d2 = (double*)malloc(sizeof(double) * (i2 + 1) * (j2 + 1));
+    double* d3 = (double*)malloc(sizeof(double) * (i3 + 1) * (j3 + 1));
+    double* d4 = (double*)malloc(sizeof(double) * (i4 + 1) * (j4 + 1));
+    double* f4 = (double*)malloc(sizeof(double) * (i4 + 1) * (j4 + 1));
+    
+    for (int ii = 0; ii <= i4 - 1; ii++) {
+        for (int jj = 0; jj <= j4 - 1; jj++) {
+            i = 4 * ii;
+            j = 4 * jj;
+            f4[jj * i4 + ii] = f1[j * i1 + i];
+            double tmp = f1[j * i1 + i];
+        }
+    }
+    
+    double tmp = f1[24 * i1 + 0];
+    tmp = f4[6 * i4 + 0];
+    
+    while (rmean > tmean) {
+        rmean = 0.0;
+        
+        for (int i = 1; i <= i1 - 1; i++) {
+            for (int j = 1; j <= j1 - 1; j++) {
+                r1[j * i1 + i] = u1[j * i1 + i - 1] + u1[j * i1 + i + 1] + u1[(j - 1) * i1 + i] + u1[(j + 1) * i1 + i] - 4.0 * u1[j * i1 + i] - f1[j * i1 + i];
+            }
+        }
+        restrc(r1, i1, j1, r2, i2, j2);
+        restrc(r2, i2, j2, r3, i3, j3);
+        restrc(r3, i3, j3, r4, i4, j4);
+        gaussb(r4, d4, f4, i4, j4);
+        prorlx(d4, i4, j4, d3, i3, j3, r3);
+        prorlx(d3, i3, j3, d2, i2, j2, r2);
+        prorlx(d2, i2, j2, d1, i1, j1, r1);
+        
+        for (int i = 1; i <= i1 - 1; i++) {
+            for (int j = 1; j <= j1 - 1; j++) {
+                u1[j * i1 + i] += d1[j * i1 + i];
+                rmean += absd(r1[j * i1 + i]);
+            }
+        }
+        rmean /= i1 * j1;
+        NSLog(@"rmean: %lf", rmean);
+        if(rmean > 200){
+            break;
+        }
+        
+    }
+    
+    free(r1);
+    free(r2);
+    free(r3);
+    free(r4);
+    free(d1);
+    free(d2);
+    free(d3);
+    free(d4);
+    free(f4);
 }
 
 - (UIImage *)hdrWithInputImage:(UIImage *)inputImage
 {
-
+    UIImage* resultImage;
+    
+    /*
+    {
+        double value = -2.3456789876543212345678987654321;
+        value /= 10.0;
+        RGBA rgba = double2RGBA(value);
+        double result = RGBA2double(rgba);
+        rgba = double2RGBA(result);
+        result = RGBA2double(rgba);
+        NSLog(@"input %lf, rgba:%lf %lf %lf %lf", value, rgba.a, rgba.b, rgba.g, rgba.r);
+        NSLog(@"%lf", result);
+        double err = result - value;
+        NSLog(@"Err10:%lf", err * 100000000);
+    }
+    return inputImage;
     for (int i = 0; i < 10000; i++) {
         
-        double value = (double)i / 10000000;
+        double value = (double)i / 10000;
         double unko = value / 2.0;
         RGBA v = double2RGBA(value);
         RGBA u = double2RGBA(unko);
@@ -502,7 +708,6 @@ RGBA addRGBA(RGBA a, RGBA b){
         NSLog(@"%lf -> %lf", tmp, result);
      
     }
-    /*
     {
         double value = 9.9999999976;
         value /= 10.0;
@@ -515,24 +720,23 @@ RGBA addRGBA(RGBA a, RGBA b){
         double err = result - value;
         NSLog(@"Err10:%lf", err * 1000000000);
     }
+    return inputImage;
+
     
      */
-
-    return inputImage;
     
-    UIImage* resultImage;
+    /*
+
     GPUImagePicture *imagePicture = [[GPUImagePicture alloc] initWithImage:inputImage];
     GPUImagePicture *imagePicture2 = [[GPUImagePicture alloc] initWithImage:[UIImage imageNamed:@"ipad.jpg"]];
     GPUGaussSeidelFilter* gaussSeidel = [[GPUGaussSeidelFilter alloc] init];
-    gaussSeidel.numIterations = 2;
+    gaussSeidel.numIterations = 5;
     [imagePicture addTarget:gaussSeidel];
     [imagePicture2 addTarget:gaussSeidel atTextureLocation:1];
     [imagePicture processImage];
     [imagePicture2 processImage];
     return [gaussSeidel imageFromCurrentlyProcessedOutput];
-    
-    /*
-    GPUImagePicture *imagePicture = [[GPUImagePicture alloc] initWithImage:inputImage];
+        GPUImagePicture *imagePicture = [[GPUImagePicture alloc] initWithImage:inputImage];
     GPUImageGaussianBlurFilter* filter6 = [[GPUImageGaussianBlurFilter alloc] init];
     filter6.blurRadiusInPixels = 100.0;
     [imagePicture addTarget:filter6];
@@ -628,6 +832,12 @@ RGBA addRGBA(RGBA a, RGBA b){
     
     YUV yuv;
     RGB rgb;
+    
+    for (int i = 0; i < width; i++) {
+        for (int j = 0; j < height; j++) {
+            result[j * width + i] = 0.0;
+        }
+    }
 
     
     for (j = 0 ; j < height; j++)
@@ -682,7 +892,8 @@ RGBA addRGBA(RGBA a, RGBA b){
     gradient(g_div, radiances, phis, width, height);
     free(phis);
     NSLog(@"called gassb.");
-    gaussb(result, radiances, g_div, width, height);
+    //gaussb_(result, g_div, width, height);
+    mgm2(result, radiances, g_div, width, height);
     free(g_div);
     NSLog(@"called expall.");
     expall(result, radiances, width, height);
@@ -692,9 +903,9 @@ RGBA addRGBA(RGBA a, RGBA b){
     alpha = 0.3;
     
     
-    for (int j = 1 ; j < height - 1; j++)
+    for (int j = 1 ; j < height; j++)
     {
-        for (int i = 1; i < width - 1; i++)
+        for (int i = 1; i < width; i++)
         {
             radiance_index = (j * width) * 4 + i * 4;
             pixel = buffer + j * bytesPerRow + i * 4;
@@ -708,6 +919,7 @@ RGBA addRGBA(RGBA a, RGBA b){
             
             
             
+            /*
             // Soft Light
             tmp = (double)*(pixel) / 255.0;
             tmp = rgb.r * alpha + (1.0 - alpha) * tmp;
@@ -734,7 +946,6 @@ RGBA addRGBA(RGBA a, RGBA b){
             
             
             
-            /*
              // Hard light
              tmp = (double)*(pixel) / 255.0;
              if(rgb.r < 0.5){

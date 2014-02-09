@@ -83,7 +83,7 @@ NSString *const kGPUGaussSeidelFilterFragmentShaderString = SHADER_STRING
      vec3 leftColor2 = texture2D(inputImageTexture2, leftTextureCoordinate2).rgb;
      vec3 rightColor2 = texture2D(inputImageTexture2, rightTextureCoordinate2).rgb;
      vec3 topColor2 = texture2D(inputImageTexture2, topTextureCoordinate2).rgb;
-
+     
      
      highp float tmp = rgba2float(centerColor);
      highp float unko = 0.99999999788;
