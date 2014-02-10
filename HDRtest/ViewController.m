@@ -587,6 +587,7 @@ void gaussb(double* r1, double* d1, double* f1, int i1, int j1){
     int updated = 1;
     double precision = 0.0001;
     double prev_d1;
+    double tmp;
     while (updated > 0) {
         updated = 0;
         for (int j = 1 ; j <= j1 - 1; j++)
@@ -594,7 +595,9 @@ void gaussb(double* r1, double* d1, double* f1, int i1, int j1){
             for (int i = 1; i <= i1 - 1; i++)
             {
                 prev_d1 = d1[j * i1 + i];
-                d1[j * i1 + i] = 0.25 * (d1[j * i1 + i - 1] + d1[j * i1 + i + 1] + d1[(j - 1) * i1 + i] + d1[(j + 1) * i1 + i] + r1[j * i1 + i] - f1[j * i1 + i]);
+                tmp = f1[j * i1 + i];
+                tmp = r1[j * i1 + i];
+                d1[j * i1 + i] = 0.25 * (d1[j * i1 + i - 1] + d1[j * i1 + i + 1] + d1[(j - 1) * i1 + i] + d1[(j + 1) * i1 + i] + r1[j * i1 + i] - 4.0 * f1[j * i1 + i]);
                 if (absd(d1[j * i1 + i] - prev_d1) > precision) {
                     updated++;
                 }
@@ -613,6 +616,39 @@ void zeros(double* p1, double* p2, int i1, int j1){
     }
 }
 
+void solve(double* x1, double* f1, int i1, int j1){
+    int updated = 1;
+    double precision = 0.001;
+    double prev_d1;
+    while (updated > 0) {
+        updated = 0;
+        for (int j = 1 ; j <= j1 - 1; j++)
+        {
+            for (int i = 1; i <= i1 - 1; i++)
+            {
+                prev_d1 = x1[j * i1 + i];
+                x1[j * i1 + i] = 0.25 * (x1[j * i1 + i - 1] + x1[j * i1 + i + 1] + x1[(j - 1) * i1 + i] + x1[(j + 1) * i1 + i] - f1[j * i1 + i]);
+                if (absd(x1[j * i1 + i] - prev_d1) > precision) {
+                    updated++;
+                }
+            }
+        }
+        NSLog(@"solve updated %d", updated);
+    }
+}
+
+void mgv(double* u1, double* f1, int i1, int j1){
+    double* r1 = (double*)malloc(sizeof(double) * (i1 + 1) * (j1 + 1));
+    
+    for (int i = 1; i < i1 - 1; i++) {
+        for (int j = 1; j < j1 - 1; j++) {
+            r1[j * i1 + i] = u1[j * i1 + i - 1] + u1[j * i1 + i + 1] + u1[(j - 1) * i1 + i] + u1[(j + 1) * i1 + i] - 4.0 * u1[j * i1 + i] - f1[j * i1 + i];
+        }
+    }
+
+    free(r1);
+}
+
 void _mgm2(double* u1, double* f1, int width, int height){
     int i, j;
     int i1 = width;
@@ -626,7 +662,7 @@ void _mgm2(double* u1, double* f1, int width, int height){
     
     double rmean = 1.0;
     double tmean = 0.0001;
-    double precision = 0.0001;
+    double precision = 0.001;
     double prev_rmean = 1.0;
 
     
@@ -638,6 +674,7 @@ void _mgm2(double* u1, double* f1, int width, int height){
     double* d2 = (double*)malloc(sizeof(double) * (i2 + 1) * (j2 + 1));
     double* d3 = (double*)malloc(sizeof(double) * (i3 + 1) * (j3 + 1));
     double* d4 = (double*)malloc(sizeof(double) * (i4 + 1) * (j4 + 1));
+    double* f2 = (double*)malloc(sizeof(double) * (i2 + 1) * (j2 + 1));
     double* f4 = (double*)malloc(sizeof(double) * (i4 + 1) * (j4 + 1));
     
     zeros(r1, d1, i1, j1);
@@ -653,17 +690,33 @@ void _mgm2(double* u1, double* f1, int width, int height){
         }
     }
     
+    for (int ii = 0; ii <= i2 - 1; ii++) {
+        for (int jj = 0; jj <= j2 - 1; jj++) {
+            i = 2 * ii;
+            j = 2 * jj;
+            f2[jj * i2 + ii] = f1[j * i1 + i];
+        }
+    }
+    
     
     while (rmean > tmean) {
         rmean = 0.0;
         
+
         for (int i = 1; i < i1 - 1; i++) {
             for (int j = 1; j < j1 - 1; j++) {
                 r1[j * i1 + i] = u1[j * i1 + i - 1] + u1[j * i1 + i + 1] + u1[(j - 1) * i1 + i] + u1[(j + 1) * i1 + i] - 4.0 * u1[j * i1 + i] - f1[j * i1 + i];
             }
         }
         
-        gaussb(r1, d1, f1, i1, j1);
+        zeros(d2, d2, i2, j2);
+        zeros(d1, d1, i1, j1);
+        
+        restrc(f1, i1, j1, f2, i2, j2);
+        solve(<#double *x1#>, <#double *f1#>, <#int i1#>, <#int j1#>)
+        gaussb(r2, d2, f2, i2, j2);
+        prorlx(d2, i2, j2, d1, i1, j1, r1);
+        
         
         double tmp;
         for (int i = 1; i < i1 - 1; i++) {
@@ -696,6 +749,7 @@ void _mgm2(double* u1, double* f1, int width, int height){
             break;
         }
         prev_rmean = rmean;
+        NSLog(@"rmean:%lf", rmean);
 
     }
     
@@ -707,6 +761,7 @@ void _mgm2(double* u1, double* f1, int width, int height){
     free(d2);
     free(d3);
     free(d4);
+    free(f2);
     free(f4);
 }
 
