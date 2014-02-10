@@ -523,26 +523,26 @@ void restrc(float* r1, int i1, int j1, float* r2, int i2, int j2){
 }
 
 void prolon(float* d2, int i2, int j2, float* d1, int i1, int j1){
-    for (int i = 1; i <= i2 - 1; i++) {
-        for (int j = 1; j <= j2 - 1; j++) {
+    for (int i = 1; i < i2 - 1; i++) {
+        for (int j = 1; j < j2 - 1; j++) {
             d1[2 * j * i1 + 2 * i] = d2[j * i2 + i];
         }
     }
-    int i;
-    for (int ii = 1; ii <= i2 - 1; ii++) {
+    int i, j;
+    for (int ii = 1; ii < i2 - 1; ii++) {
         i = 2 * ii;
         d1[1 * i1 + i] = (3.0 * d1[0 * i1 + i] + 6.0 * d1[2 * i1 + i] - d1[4 * i1 + i]) / 8.0;
-        for (int j = 3; j <= j1 - 3; j += 2) {
+        for (j = 3; j < j1 - 3; j += 2) {
             d1[j * i1 + i] = (9.0 * d1[(j - 1) * i1 + i] + 9.0 * d1[(j + 1) * i1 + i] - d1[(j + 3) * i1 + i] - d1[(j - 3) * i1 + i]) / 16.0;
         }
-        d1[(j1 - 1) * i1 + i] = (6.0 * d1[(j1 - 2) * i1 + i] + 3.0 * d1[j1 * i1 + i] - d1[(j1 - 4) * i1 + i]);
+        d1[(j1 - 2) * i1 + i] = (6.0 * d1[(j1 - 3) * i1 + i] + 3.0 * d1[(j1 - 1) * i1 + i] - d1[(j1 - 5) * i1 + i]);
     }
-    for (int j = 1; j <= j1 - 1; j++) {
+    for (int j = 1; j < j1 - 1; j++) {
         d1[j * i1 + 1] = (3.0 * d1[j * i1 + 0] + 6.0 * d1[j * i1 + 2] - d1[j * i1 + 4]) / 8.0;
-        for (int i = 3; i <= i1 - 3; i += 2) {
+        for (int i = 3; i < i1 - 3; i += 2) {
             d1[j * i1 + i] = (9.0 * d1[j * i1 + i - 1] + 9.0 * d1[j * i1 + i + 1] - d1[j * i1 + i + 3] - d1[j * i1 + i - 3]) / 16.0;
         }
-        d1[j * i1 + i1 - 1] = (6.0 * d1[j * i1 + i1 - 2] + 3.0 * d1[j * i1 + i1] - d1[j * i1 + i1 - 4]);
+        d1[j * i1 + i1 - 2] = (6.0 * d1[j * i1 + i1 - 3] + 3.0 * d1[j * i1 + i1 - 1] - d1[j * i1 + i1 - 5]);
     }
 }
 
@@ -650,21 +650,15 @@ void mgv(float* u1, float* f1, int i1, int j1, int current_grid, int max_grid){
     float* r2 = (float*)malloc(sizeof(float) * (i2 + 1) * (j2 + 1));
     float* d2 = (float*)malloc(sizeof(float) * (i2 + 1) * (j2 + 1));
     
-    zeros(d2, r2, i2, j2);
     zeros(d1, r1, i1, j1);
+    zeros(d2, r2, i2, j2);
     
     for (int i = 1; i < i1 - 1; i++) {
         for (int j = 1; j < j1 - 1; j++) {
             r1[j * i1 + i] = u1[j * i1 + i - 1] + u1[j * i1 + i + 1] + u1[(j - 1) * i1 + i] + u1[(j + 1) * i1 + i] - 4.0 * u1[j * i1 + i] - f1[j * i1 + i];
         }
     }
-    
-    for (int i = 1; i < i2 - 1; i++) {
-        for (int j = 1; j < j2 - 1; j++) {
-            d2[j * i2 + i] = 0.0;
-        }
-    }
-    
+
     restrc(r1, i1, j1, r2, i2, j2);
     
     if (current_grid == max_grid) {
@@ -725,14 +719,16 @@ void fmg(float* u1, float* f1, int width, int height, int grids){
         restrc(f2, i2, j2, f3, i3, j3);
         solve(u3, f3, i3, j3);
         prolon(u3, i3, j3, u2, i2, j2);
-        mgv(u2, f2, i2, j2, 1, 2);
+        mgv(u2, f2, i2, j2, 2, 3);
         prolon(u2, i2, j2, u1, i1, j1);
-        mgv(u1, f1, i1, j1, 2, 2);
+        mgv(u1, f1, i1, j1, 1, 3);
+        solve(u1, f1, i1, j1);
     } else if (grids == 1){
         restrc(f1, i1, j1, f2, i2, j2);
         solve(u2, f2, i2, j2);
         prolon(u2, i2, j2, u1, i1, j1);
-        mgv(u1, f1, i1, j1, 1, 1);
+        mgv(u1, f1, i1, j1, 1, 2);
+        solve(u1, f1, i1, j1);
     } else if(grids == 0){
         solve(u1, f1, i1, j1);
     }
@@ -870,60 +866,6 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
     return inputImage;
 
     
-     */
-    
-    /*
-
-    GPUImagePicture *imagePicture = [[GPUImagePicture alloc] initWithImage:inputImage];
-    GPUImagePicture *imagePicture2 = [[GPUImagePicture alloc] initWithImage:[UIImage imageNamed:@"ipad.jpg"]];
-    GPUGaussSeidelFilter* gaussSeidel = [[GPUGaussSeidelFilter alloc] init];
-    gaussSeidel.numIterations = 5;
-    [imagePicture addTarget:gaussSeidel];
-    [imagePicture2 addTarget:gaussSeidel atTextureLocation:1];
-    [imagePicture processImage];
-    [imagePicture2 processImage];
-    return [gaussSeidel imageFromCurrentlyProcessedOutput];
-        GPUImagePicture *imagePicture = [[GPUImagePicture alloc] initWithImage:inputImage];
-    GPUImageGaussianBlurFilter* filter6 = [[GPUImageGaussianBlurFilter alloc] init];
-    filter6.blurRadiusInPixels = 100.0;
-    [imagePicture addTarget:filter6];
-    [imagePicture processImage];
-    return [filter6 imageFromCurrentlyProcessedOutput];
-    
-    
-    GPUImagePicture *imagePicture = [[GPUImagePicture alloc] initWithImage:inputImage];
-    GPUImageGaussianBlurFilter* filter0 = [[GPUImageGaussianBlurFilter alloc] init];
-    GPUImageGaussianBlurFilter* filter1 = [[GPUImageGaussianBlurFilter alloc] init];
-    GPUImageGaussianBlurFilter* filter2 = [[GPUImageGaussianBlurFilter alloc] init];
-    GPUImageGaussianBlurFilter* filter3 = [[GPUImageGaussianBlurFilter alloc] init];
-    GPUImageGaussianBlurFilter* filter4 = [[GPUImageGaussianBlurFilter alloc] init];
-    GPUImageGaussianBlurFilter* filter5 = [[GPUImageGaussianBlurFilter alloc] init];
-    GPUImageGaussianBlurFilter* filter6 = [[GPUImageGaussianBlurFilter alloc] init];
-    GPUImageGaussianBlurFilter* filter7 = [[GPUImageGaussianBlurFilter alloc] init];
-    GPUImageGaussianBlurFilter* filter8 = [[GPUImageGaussianBlurFilter alloc] init];
-    GPUImageGaussianBlurFilter* filter9 = [[GPUImageGaussianBlurFilter alloc] init];
-    filter0.blurRadiusInPixels = 1.0;
-    filter1.blurRadiusInPixels = 1.0;
-    filter2.blurRadiusInPixels = 1.0;
-    filter3.blurRadiusInPixels = 1.0;
-    filter4.blurRadiusInPixels = 1.0;
-    filter5.blurRadiusInPixels = 1.0;
-    filter6.blurRadiusInPixels = 1.0;
-    filter7.blurRadiusInPixels = 1.0;
-    filter8.blurRadiusInPixels = 1.0;
-    filter9.blurRadiusInPixels = 1.0;
-    [imagePicture addTarget:filter0];
-    [filter0 addTarget:filter1];
-    [filter1 addTarget:filter2];
-    [filter2 addTarget:filter3];
-    [filter3 addTarget:filter4];
-    [filter4 addTarget:filter5];
-    [filter5 addTarget:filter6];
-    [filter6 addTarget:filter7];
-    [filter7 addTarget:filter8];
-    [filter8 addTarget:filter9];
-    [imagePicture processImage];
-    return [filter6 imageFromCurrentlyProcessedOutput];
      */
     
     
@@ -1064,6 +1006,7 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
             rgb.b = pow(radiances[radiance_index + 2] / radiances[radiance_index + 3], s) * tmp;
             
             
+            /*
             
             // Soft Light
             tmp = (float)*(pixel) / 255.0;
@@ -1090,7 +1033,6 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
              
             
             
-            /*
             
              // Hard light
              tmp = (float)*(pixel) / 255.0;
