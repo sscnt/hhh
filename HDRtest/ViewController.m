@@ -80,9 +80,11 @@
 
     }
     
+    CGFloat base_width = 50.0f;
+    
     UIImageView* view = [[UIImageView alloc] initWithImage:self.loadedImage];
-    CGFloat height = self.loadedImage.size.height * 320.0f / self.loadedImage.size.width;
-    [view setFrame:CGRectMake(0.0f, 44.0f, 320.0f, height)];
+    CGFloat height = self.loadedImage.size.height * base_width / self.loadedImage.size.width;
+    [view setFrame:CGRectMake(0.0f, 44.0f, base_width, height)];
     [self.view addSubview:view];
     
     NSLog(@"%f, %f", height, self.loadedImage.size.width);
@@ -90,8 +92,8 @@
     CGFloat y = height + 10.0f;
     
     view = [[UIImageView alloc] initWithImage:result];
-    height = self.loadedImage.size.height * 320.0f / self.loadedImage.size.width;
-    [view setFrame:CGRectMake(0.0f, 44.0f + y, 320.0f, height)];
+    height = self.loadedImage.size.height * base_width / self.loadedImage.size.width;
+    [view setFrame:CGRectMake(0.0f, 44.0f + y, base_width, height)];
     [self.view addSubview:view];
 }
 
@@ -309,6 +311,7 @@ void gradient(double* g_div, double* radiances, double* phis, int width, int hei
         g_div[(height - 1) * width + width - 1] = 0.0;
     }
     
+    double tmp;
     for (int j = 1 ; j < height - 1; j++)
     {
         for (int i = 1; i < width - 1; i++)
@@ -321,6 +324,8 @@ void gradient(double* g_div, double* radiances, double* phis, int width, int hei
             
             g_div[j * width + i] += phi * (radiances[j * width * 4 + (i - 1) * 4 + 3] + radiances[j * width * 4 + (i + 1) * 4 + 3] - 2.0 * lum);
             g_div[j * width + i] += phi * (radiances[(j - 1) * width * 4 + i * 4 + 3] + radiances[(j + 1) * width * 4 + i * 4 + 3] - 2.0 * lum);
+            
+            tmp = g_div[j * width + i];
         }
     }
 }
@@ -580,7 +585,7 @@ void prorlx(double* d2, int i2, int j2, double* d1, int i1, int j1, double* r1){
 
 void gaussb(double* r1, double* d1, double* f1, int i1, int j1){
     int updated = 1;
-    double precision = 0.001;
+    double precision = 0.0001;
     double prev_d1;
     while (updated > 0) {
         updated = 0;
@@ -597,6 +602,112 @@ void gaussb(double* r1, double* d1, double* f1, int i1, int j1){
         }
         //NSLog(@"gaussb updated %d", updated);
     }
+}
+
+void zeros(double* p1, double* p2, int i1, int j1){
+    for (int i = 0; i < i1; i++) {
+        for (int j = 0; j < j1; j++) {
+            p1[j * i1 + i] = 0.0;
+            p2[j * i1 + i] = 0.0;
+        }
+    }
+}
+
+void _mgm2(double* u1, double* f1, int width, int height){
+    int i, j;
+    int i1 = width;
+    int j1 = height;
+    int i2 = i1 / 2;
+    int j2 = j1 / 2;
+    int i3 = i2 / 2;
+    int j3 = j2 / 2;
+    int i4 = i3 / 2;
+    int j4 = j3 / 2;
+    
+    double rmean = 1.0;
+    double tmean = 0.0001;
+    double precision = 0.0001;
+    double prev_rmean = 1.0;
+
+    
+    double* r1 = (double*)malloc(sizeof(double) * (i1 + 1) * (j1 + 1));
+    double* r2 = (double*)malloc(sizeof(double) * (i2 + 1) * (j2 + 1));
+    double* r3 = (double*)malloc(sizeof(double) * (i3 + 1) * (j3 + 1));
+    double* r4 = (double*)malloc(sizeof(double) * (i4 + 1) * (j4 + 1));
+    double* d1 = (double*)malloc(sizeof(double) * (i1 + 1) * (j1 + 1));
+    double* d2 = (double*)malloc(sizeof(double) * (i2 + 1) * (j2 + 1));
+    double* d3 = (double*)malloc(sizeof(double) * (i3 + 1) * (j3 + 1));
+    double* d4 = (double*)malloc(sizeof(double) * (i4 + 1) * (j4 + 1));
+    double* f4 = (double*)malloc(sizeof(double) * (i4 + 1) * (j4 + 1));
+    
+    zeros(r1, d1, i1, j1);
+    zeros(r2, d2, i2, j2);
+    zeros(r3, d3, i3, j3);
+    zeros(r4, d4, i4, j4);
+    
+    for (int ii = 0; ii <= i4 - 1; ii++) {
+        for (int jj = 0; jj <= j4 - 1; jj++) {
+            i = 4 * ii;
+            j = 4 * jj;
+            f4[jj * i4 + ii] = f1[j * i1 + i];
+        }
+    }
+    
+    
+    while (rmean > tmean) {
+        rmean = 0.0;
+        
+        for (int i = 1; i < i1 - 1; i++) {
+            for (int j = 1; j < j1 - 1; j++) {
+                r1[j * i1 + i] = u1[j * i1 + i - 1] + u1[j * i1 + i + 1] + u1[(j - 1) * i1 + i] + u1[(j + 1) * i1 + i] - 4.0 * u1[j * i1 + i] - f1[j * i1 + i];
+            }
+        }
+        
+        gaussb(r1, d1, f1, i1, j1);
+        
+        double tmp;
+        for (int i = 1; i < i1 - 1; i++) {
+            for (int j = 1; j < j1 - 1; j++) {
+                tmp = f1[j * i1 + i];
+                tmp = d1[j * i1 + i];
+                tmp = r1[j * i1 + i];
+                tmp = u1[j * i1 + i];
+            }
+        }
+        
+        for (int i = 1; i < i1 - 1; i++) {
+            for (int j = 1; j < j1 - 1; j++) {
+                tmp = f1[j * i1 + i];
+                tmp = u1[j * i1 + i - 1] + u1[j * i1 + i + 1] + u1[(j - 1) * i1 + i] + u1[(j + 1) * i1 + i] - 4.0 * u1[j * i1 + i];
+            }
+        }
+        
+        
+        for (int i = 1; i < i1 - 1; i++) {
+            for (int j = 1; j < j1 - 1; j++) {
+                double tmp = f1[j * i1 + i];
+                tmp = d1[j * i1 + i];
+                u1[j * i1 + i] += d1[j * i1 + i];
+                rmean += absd(r1[j * i1 + i]);
+            }
+        }
+        rmean /= i1 * j1;
+        if(absd(prev_rmean - rmean) < precision){
+            break;
+        }
+        prev_rmean = rmean;
+
+    }
+    
+    free(r1);
+    free(r2);
+    free(r3);
+    free(r4);
+    free(d1);
+    free(d2);
+    free(d3);
+    free(d4);
+    free(f4);
 }
 
 void mgm2(double* u1, double* radiances, double* f1, int width, int height){
@@ -833,11 +944,7 @@ void mgm2(double* u1, double* radiances, double* f1, int width, int height){
     YUV yuv;
     RGB rgb;
     
-    for (int i = 0; i < width; i++) {
-        for (int j = 0; j < height; j++) {
-            result[j * width + i] = 0.0;
-        }
-    }
+    zeros(result, g_div, width, height);
 
     
     for (j = 0 ; j < height; j++)
@@ -874,7 +981,10 @@ void mgm2(double* u1, double* radiances, double* f1, int width, int height){
                 //w0 = ev_4 - ev4;
                 //tmp = r + w0 * (ev2 + ev4 + ev_2 + ev_4) / 4.0;
                 tmp = (ev0 + ev2 + ev4 + ev_2 + ev_4) / 5.0;
-                radiances[radiance_index + i] = tmp;
+                //radiances[radiance_index + i] = tmp;
+                
+                // NUWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                radiances[radiance_index + i] = ev0;
             }
             
             lum = rgb2luminance(radiances[radiance_index], radiances[radiance_index + 1], radiances[radiance_index + 2]);
@@ -893,7 +1003,7 @@ void mgm2(double* u1, double* radiances, double* f1, int width, int height){
     free(phis);
     NSLog(@"called gassb.");
     //gaussb_(result, g_div, width, height);
-    mgm2(result, radiances, g_div, width, height);
+    _mgm2(result, g_div, width, height);
     free(g_div);
     NSLog(@"called expall.");
     expall(result, radiances, width, height);
