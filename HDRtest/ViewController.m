@@ -419,6 +419,94 @@ void calcphis(float* phis, float* radiances, int width, int height, float alpha,
             phis[j * width + i] = phi;
         }
     }
+}
+
+void apply_phis(float* phis, UIImage** g1, UIImage** g2, UIImage** g3, UIImage** g4, UIImage** g5){
+    int width = (int)CGImageGetWidth((*g1).CGImage);
+    int height = (int)CGImageGetHeight((*g1).CGImage);
+    size_t bytesPerRow = CGImageGetBytesPerRow((*g1).CGImage);
+    int i, j, r, g, b;
+    UInt8* pixel;
+    float phi, h_x, h_y, tmp, h, lum, lumr, lumt;
+    float alpha = 0.1;
+    float beta = 0.8;
+    float max_phi = 0.0;
+    float min_phi = 1.0;
+    
+    CGDataProviderRef dataProvider;
+    CFDataRef data;
+    CFMutableDataRef mutableData;
+    UInt8* buffer;
+    
+    UIImage* __autoreleasing* images[5];
+    images[0] = g5;
+    images[1] = g4;
+    images[2] = g3;
+    images[3] = g2;
+    images[4] = g1;
+    
+    UIImage* image;
+    float po;
+    
+    for (int i = 0; i < 5; i++) {
+        image = *(images[i]);
+        dataProvider = CGImageGetDataProvider(image.CGImage);
+        data = CGDataProviderCopyData(dataProvider);
+        mutableData = CFDataCreateMutableCopy(0, 0, data);
+        buffer = (UInt8*)CFDataGetMutableBytePtr(mutableData);
+        po = powf(2.0, (float)i + 2);
+        
+        for (int j = 1 ; j < height - 1; j++)
+        {
+            for (int i = 1; i < width - 1; i++)
+            {
+                phi = phis[j * width + i];
+                
+                pixel = buffer + j * bytesPerRow + i * 4;
+                r = (float)*(pixel + 0);
+                g = (float)*(pixel + 1);
+                b = (float)*(pixel + 2);
+                lum = 0.299 * r + 0.587 * g + 0.114 * b;
+                
+                pixel = buffer + j * bytesPerRow + (i + 1) * 4;
+                r = (float)*(pixel + 0);
+                g = (float)*(pixel + 1);
+                b = (float)*(pixel + 2);
+                lumr = 0.299 * r + 0.587 * g + 0.114 * b;
+                
+                pixel = buffer + (j + 1) * bytesPerRow + i * 4;
+                r = (float)*(pixel + 0);
+                g = (float)*(pixel + 1);
+                b = (float)*(pixel + 2);
+                lumt = 0.299 * r + 0.587 * g + 0.114 * b;
+                
+                h_x = (lumr - lum) / po / 255.0;
+                h_y = (lumt - lum) / po / 255.0;
+                h = sqrt(h_x * h_x + h_y * h_y);
+                
+                tmp = (alpha / h) * pow(h / alpha, beta);
+                phi *= tmp;
+                if(isnan(phi)){
+                    phi = 1.0;
+                }
+                phi = MIN(MAX(phi, 0.0), 1.0);
+                if (phi > max_phi) {
+                    max_phi = phi;
+                }else if (phi < min_phi){
+                    min_phi = phi;
+                }
+                phis[j * width + i] = phi;
+            }
+        }
+        CFRelease(data);
+        CFRelease(mutableData);
+        CFRelease(dataProvider);
+        
+    }
+    
+    NSLog(@"max_phi: %f", max_phi);
+    NSLog(@"min_phi: %f", min_phi);
+    
 
 }
 
@@ -616,6 +704,14 @@ void zeros(float* p1, float* p2, int i1, int j1){
         for (int j = 0; j < j1; j++) {
             p1[j * i1 + i] = 0.0;
             p2[j * i1 + i] = 0.0;
+        }
+    }
+}
+
+void ones(float* p1, int i1, int j1){
+    for (int i = 0; i < i1; i++) {
+        for (int j = 0; j < j1; j++) {
+            p1[j * i1 + i] = 1.0;
         }
     }
 }
@@ -887,6 +983,29 @@ void fmg(float* u1, float* f1, int width, int height, int grids){
     free(u5);
 }
 
+void apply_gaussian_blur(UIImage** inputImage, UIImage** g0, UIImage** g1, UIImage** g2, UIImage** g3, UIImage** g4){
+    GPUImagePicture* picture = [[GPUImagePicture alloc] initWithImage:*inputImage];
+    GPUImageGaussianBlurFilter* blurFilter = [[GPUImageGaussianBlurFilter alloc] init];
+    
+    [picture addTarget:blurFilter];
+    blurFilter.blurRadiusInPixels = 2.0;
+    [picture processImage];
+    *g0 = [blurFilter imageFromCurrentlyProcessedOutput];
+    blurFilter.blurRadiusInPixels = 4.0;
+    [picture processImage];
+    *g1 = [blurFilter imageFromCurrentlyProcessedOutput];
+    blurFilter.blurRadiusInPixels = 8.0;
+    [picture processImage];
+    *g2 = [blurFilter imageFromCurrentlyProcessedOutput];
+    blurFilter.blurRadiusInPixels = 16.0;
+    [picture processImage];
+    *g3 = [blurFilter imageFromCurrentlyProcessedOutput];
+    blurFilter.blurRadiusInPixels = 32.0;
+    [picture processImage];
+    *g4 = [blurFilter imageFromCurrentlyProcessedOutput];
+    
+}
+
 void mgm2(float* u1, float* radiances, float* f1, int width, int height){
     int i, j;
     int i1 = width - 1;
@@ -966,7 +1085,14 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
 
 - (UIImage *)hdrWithInputImage:(UIImage *)inputImage
 {
+    UIImage* g0;
+    UIImage* g1;
+    UIImage* g2;
+    UIImage* g3;
+    UIImage* g4;
     UIImage* resultImage;
+    
+    apply_gaussian_blur(&inputImage, &g0, &g1, &g2, &g3, &g4);
     
     int width = (int)CGImageGetWidth(inputImage.CGImage);
     int height = (int)CGImageGetHeight(inputImage.CGImage);
@@ -977,6 +1103,33 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
     CGBitmapInfo bitmapInfo = CGImageGetBitmapInfo(inputImage.CGImage);
     BOOL shouldInterpolate = CGImageGetShouldInterpolate(inputImage.CGImage);
     CGColorRenderingIntent intent = CGImageGetRenderingIntent(inputImage.CGImage);
+        NSDate* start = [NSDate date];
+    
+    float r, g, b, ev0, ev2, ev4, ev_2, ev_4, exp0, exp2, exp4, exp_2, exp_4;
+    
+    exp0 = 1.0;
+    exp2 = 0.5;
+    exp4 = 0.25;
+    exp_2 = 2.0;
+    exp_4 = 4.0;
+    
+    float lum, alpha;
+    float tmp;
+    float *result = (float*)malloc(sizeof(float) * width * height);
+    float *radiances = (float*)malloc(sizeof(float) * width * height * 4);
+    float *g_div = (float*)malloc(sizeof(float) * width * height);
+    float* phis = (float*)malloc(sizeof(float) * width * height);
+    int radiance_index;
+    
+
+    float l_white = 0.0;
+    float lw_sum = 0.0;
+    float set[3] = {0.0, 0.0, 0.0};
+    
+    RGB rgb;
+    
+    zeros(result, g_div, width, height);
+    ones(phis, width, height);
     
     // データプロバイダを取得する
     CGDataProviderRef dataProvider = CGImageGetDataProvider(inputImage.CGImage);
@@ -988,42 +1141,7 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
     UInt8* buffer = (UInt8*)CFDataGetMutableBytePtr(mutableData);
     int i, j;
     UInt8* pixel;
-    NSDate* start = [NSDate date];
-    
-    float r, g, b, _r, _g, _b, ev0, ev2, ev4, ev_2, ev_4, ev_8, exp0, exp2, exp4, exp8, exp_2, exp_4;
-    
-    exp0 = 1.0;
-    exp2 = 0.5;
-    exp4 = 0.25;
-    exp_2 = 2.0;
-    exp_4 = 4.0;
-    
-    float lum, _lum, alpha;
-    float tmp;
-    float *result = (float*)malloc(sizeof(float) * width * height);
-    float *radiances = (float*)malloc(sizeof(float) * width * height * 4);
-    float *g_div = (float*)malloc(sizeof(float) * width * height);
-    float* phis = (float*)malloc(sizeof(float) * width * height);
-    float *radiances_pixel;
-    float *lum_delta;
-    int radiance_index;
-    float max_lum = 0.0;
-    
-    float max_pixel_value = (1.0 + 1.0 / exp2 + 1.0 / exp4 + 1.0 / exp_2 + 1.0 / exp_4) / 3.0;
-    float min_pixel_value = 0.0;
-    float lw;
-    float lw_global;
-    float l_white = 0.0;
-    float lw_sum = 0.0;
-    float w0, w1, w2, w3, w4;
-    float set[3] = {0.0, 0.0, 0.0};
-    
-    YUV yuv;
-    RGB rgb;
-    
-    zeros(result, g_div, width, height);
 
-    
     for (j = 0 ; j < height; j++)
     {
         for (i = 0; i < width; i++)
@@ -1058,10 +1176,10 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
                 //w0 = ev_4 - ev4;
                 //tmp = r + w0 * (ev2 + ev4 + ev_2 + ev_4) / 4.0;
                 tmp = (ev0 + ev2 + ev4 + ev_2 + ev_4) / 5.0;
-                //radiances[radiance_index + i] = tmp;
+                radiances[radiance_index + i] = tmp;
                 
                 // NUWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-                radiances[radiance_index + i] = ev0;
+                //radiances[radiance_index + i] = ev0;
             }
             
             lum = rgb2luminance(radiances[radiance_index], radiances[radiance_index + 1], radiances[radiance_index + 2]);
@@ -1069,12 +1187,13 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
             if(lum > l_white){
                 l_white = lum;
             }
-            radiances[radiance_index + 3] = log(lum + 0.0001);
+            radiances[radiance_index + 3] = logf(lum + 0.0001);
         }
     }
     
     NSLog(@"called phis.");
-    calcphis(phis, radiances, width, height, 0.1, 0.8);
+    //calcphis(phis, radiances, width, height, 0.1, 0.8);
+    apply_phis(phis, &g0, &g1, &g2, &g3, &g4);
     NSLog(@"called gradiant.");
     gradient(g_div, radiances, phis, width, height);
     free(phis);
