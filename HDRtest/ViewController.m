@@ -611,15 +611,117 @@ RGBA addRGBA(RGBA a, RGBA b){
 
 void restrc(float* r1, int i1, int j1, float* r2, int i2, int j2){
     zeros(r2, r2, i2, j2);
-    int i, j;
-    for(int ii = 0; ii < i2;ii++){
+    int i, j, ii, jj;
+    
+    // left top
+    r2[0] = r1[0] * 4.0 / 9.0 + (r1[1] + r1[i1]) * 2.0 / 9.0 + r1[i1 + 1] / 9.0;
+    
+    // center
+    for (ii = 1; ii < i2 - 1; ii++) {
         i = 2 * ii;
-        for (int jj = 0; jj < j2; jj++) {
+        for (jj = 1; jj < j2 - 1; jj++) {
             j = 2 * jj;
-            NSLog(@"r2(%d,%d) = r1(%d,%d)/4 + (r1(%d,%d)+r1(%d,%d)+r1(%d,%d)+r1(%d,%d))/8 + (r1(%d,%d)+r1(%d,%d)+r1(%d,%d)+r1(%d,%d))/16", ii, jj, i, j, i - 1, j, i + 1, j, i, j - 1, i, j + 1, i + 1, j - 1, i - 1, j - 1, i + 1, j + 1, i - 1, j + 1);
             r2[jj * i2 + ii] = r1[j * i1 + i] / 4.0 + (r1[j * i1 + i - 1] +r1[j * i1 + i + 1] +r1[(j - 1) * i1 + i] +r1[(j + 1) * i1 + i]) / 8.0 + (r1[(j + 1) * i1 + i - 1] +r1[(j - 1) * i1 + i + 1] +r1[(j - 1) * i1 + i - 1] +r1[(j + 1) * i1 + i + 1]) / 16.0;
         }
     }
+    
+    // left border
+    i = 0;
+    for (jj = 1; jj < j2 - 1; jj++) {
+        j = 2 * jj;
+        r2[jj * i2] = r1[j * i1 + i] / 3.0 + (r1[(j - 1) * i1] + r1[(j + 1) * i1] + r1[j * i1 + 1]) / 6.0 + (r1[(j - 1) * i1 + 1] + r1[(j + 1) * i1 + 1]) / 12.0;
+        NSLog(@"r2(%d,%d) = r1(%d,%d)/3 + (r1(%d,%d) + r1(%d,%d) + r1(%d,%d))/6 + (r1(%d,%d) + r1(%d,%d))/12", 0, jj, i, j, 0, j - 1, 0, j + 1, 1, j, 1, j - 1, 1, j + 1);
+    }
+    
+    // top border
+    j = 0;
+    for (ii = 1; ii < i2 - 1; ii++) {
+        i = 2 * ii;
+        r2[ii] = r1[i] / 3.0 + (r1[i + 1] + r1[i - 1] + r1[(j + 1) * i1 + i]) / 6.0 + (r1[(j + 1) * i1 + i + 1] + r1[(j + 1) * i1 + i - 1]) / 12.0;
+    }
+    
+    // right border
+    ii = i2 - 1;
+    if (i2 * 2 - 1 == i1) { // same
+        i = i1 - 1;
+        for (jj = 1; jj < j2 - 1; jj++) {
+            j = 2 * jj;
+            r2[jj * i2 + ii] = r1[j * i1 + i] / 3.0 + (r1[(j - 1) * i1] + r1[(j + 1) * i1] + r1[j * i1 + i - 1]) / 6.0 + (r1[(j - 1) * i1 + i - 1] + r1[(j + 1) * i1 + i - 1]) / 12.0;
+        }
+    }else{
+        i = i1 - 2;
+        for (jj = 1; jj < j2 - 1; jj++) {
+            j = 2 * jj;
+            r2[jj * i2 + ii] = r1[j * i1 + i] / 4.0 + (r1[j * i1 + i - 1] +r1[j * i1 + i + 1] +r1[(j - 1) * i1 + i] +r1[(j + 1) * i1 + i]) / 8.0 + (r1[(j + 1) * i1 + i - 1] +r1[(j - 1) * i1 + i + 1] +r1[(j - 1) * i1 + i - 1] +r1[(j + 1) * i1 + i + 1]) / 16.0;
+        }
+    }
+    
+    // bottom border
+    jj = j2 - 1;
+    if (j2 * 2 - 1 == j1) { // same
+        j = j1 - 1;
+        for (ii = 1; ii < i2 - 1; ii++) {
+            i = 2 * ii;
+            r2[jj * i2 + ii] = r1[j * i1 + i] / 3.0 + (r1[j * i1 + i - 1] + r1[j * i1 + i + 1] + r1[(j - 1) * i1 + i]) / 6.0 + (r1[(j - 1) * i1 + i - 1] + r1[(j - 1) * i1 + i + 1]) / 12.0;
+        }
+    }else{
+        j = j1 - 2;
+        for (ii = 1; ii < i2 - 1; ii++) {
+            i = 2 * ii;
+            r2[jj * i2 + ii] = r1[j * i1 + i] / 4.0 + (r1[j * i1 + i - 1] +r1[j * i1 + i + 1] +r1[(j - 1) * i1 + i] +r1[(j + 1) * i1 + i]) / 8.0 + (r1[(j + 1) * i1 + i - 1] +r1[(j - 1) * i1 + i + 1] +r1[(j - 1) * i1 + i - 1] +r1[(j + 1) * i1 + i + 1]) / 16.0;
+        }
+    }
+    
+    // bottom left
+    jj = j2 - 1;
+    ii = 0;
+    i = 0;
+    if (j2 * 2 - 1 == j1) { // same
+        j = j1 - 1;
+        r2[jj * i2] = r1[j * i1 + i] * 4.0 / 9.0 + (r1[j * i1 + i + 1] + r1[(j - 1) * i1 + i]) * 2.0 / 9.0 + r1[(j - 1) * i1 + i + 1] / 9.0;
+    }else{
+        j = j1 - 2;
+        r2[jj * i2] = r1[j * i1 + i] / 3.0 + (r1[(j - 1) * i1] + r1[(j + 1) * i1] + r1[j * i1 + 1]) / 6.0 + (r1[(j - 1) * i1 + 1] + r1[(j + 1) * i1 + 1]) / 12.0;
+    }
+    
+    // top right
+    ii = i2 - 1;
+    jj = 0;
+    j = 0;
+    if (i2 * 2 - 1 == i1) { // same
+        i = i1 - 1;
+        r2[ii] = r1[i] * 4.0 / 9.0 + (r1[i - 1] + r1[(j - 1) * i1 + i]) * 2.0 / 9.0 + r1[(j - 1) * i1 + i - 1] / 9.0;
+    }else{
+        i = i1 - 2;
+        r2[ii] = r1[i] / 3.0 + (r1[(j + 1) * i1 + i] + r1[j * i1 + i + 1] + r1[j * i1 + i - 1]) / 6.0 + (r1[(j + 1) * i1 + i + 1] + r1[(j + 1) * i1 + i - 1]) / 12.0;
+    }
+
+    
+    
+    // bottom right
+    ii = i2 - 1;
+    if (j2 * 2 - 1 == j1) { // same bottom
+        jj = j2 - 1;
+        j = j1 - 1;
+        if (i2 * 2 - 1 == i1) { // same right
+            i = i1 - 1;
+            r2[jj * i2 + ii] = r1[j * i1 + i] * 4.0 / 9.0 + (r1[j * i1 + i - 1] + r1[(j - 1) * i1 + i]) * 2.0 / 9.0 + r1[(j - 1) * i1 + i - 1] / 9.0;
+        }else{  // difference right
+            i = i1 - 2;
+            r2[jj * i2 + ii] = r1[j * i1 + i] / 3.0 + (r1[j * i1 + i - 1] + r1[j * i1 + i + 1] + r1[(j - 1) * i1 + i]) / 6.0 + (r1[(j - 1) * i1 + i - 1] + r1[(j - 1) * i1 + i + 1]) / 12.0;
+        }
+    }else{  // difference bottom
+        jj = j2 - 1;
+        j = j1 - 2;
+        if (i2 * 2 - 1 == i1) { // same right
+            i = i1 - 1;
+            r2[jj * i2 + ii] = r1[j * i1 + i] / 3.0 + (r1[(j - 1) * i1] + r1[(j + 1) * i1] + r1[j * i1 + i - 1]) / 6.0 + (r1[(j - 1) * i1 + i - 1] + r1[(j + 1) * i1 + i - 1]) / 12.0;
+        }else{  // difference right
+            i = i1 - 2;
+            r2[jj * i2 + ii] = r1[j * i1 + i] / 4.0 + (r1[j * i1 + i - 1] +r1[j * i1 + i + 1] +r1[(j - 1) * i1 + i] +r1[(j + 1) * i1 + i]) / 8.0 + (r1[(j + 1) * i1 + i - 1] +r1[(j - 1) * i1 + i + 1] +r1[(j - 1) * i1 + i - 1] +r1[(j + 1) * i1 + i + 1]) / 16.0;
+        }
+    }
+    
 }
 
 
@@ -942,16 +1044,16 @@ void mgv(float* u1, float* f1, int i1, int j1, int current_grid, int max_grid){
 void fmg(float* u1, float* f1, int width, int height, int grids){
     int i1 = width;
     int j1 = height;
-    int i2 = i1 / 2;
-    int j2 = j1 / 2;
-    int i3 = i2 / 2;
-    int j3 = j2 / 2;
-    int i4 = i3 / 2;
-    int j4 = j3 / 2;
-    int i5 = i4 / 2;
-    int j5 = j4 / 2;
-    int i6 = i5 / 2;
-    int j6 = j5 / 2;
+    int i2 = ceil((float)i1 / 2.0);
+    int j2 = ceil((float)j1 / 2.0);
+    int i3 = ceil((float)i2 / 2.0);
+    int j3 = ceil((float)j2 / 2.0);
+    int i4 = ceil((float)i3 / 2.0);
+    int j4 = ceil((float)j3 / 2.0);
+    int i5 = ceil((float)i4 / 2.0);
+    int j5 = ceil((float)j4 / 2.0);
+    int i6 = ceil((float)i5 / 2.0);
+    int j6 = ceil((float)j5 / 2.0);
     
     float* f2 = (float*)malloc(sizeof(float) * (i2 + 1) * (j2 + 1));
     float* u2 = (float*)malloc(sizeof(float) * (i2 + 1) * (j2 + 1));
@@ -1120,12 +1222,11 @@ void map_result(float* u1, int i1, int j1){
 }
 
 void dammy_result(float* u1, int i1, int j1){
+    int n = 1;
     for (int j = 0; j < j1; j++) {
         for (int i = 0; i < i1; i++) {
-            u1[j * i1 + i] = 0.0;
-            if (i == 3 || i == 7) {
-                u1[j * i1 + i] = 1.0;
-            }
+            u1[j * i1 + i] = n;
+            n++;
         }
     }
 
