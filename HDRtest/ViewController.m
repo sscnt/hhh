@@ -630,7 +630,7 @@ void restrc(float* r1, int i1, int j1, float* r2, int i2, int j2){
     for (jj = 1; jj < j2 - 1; jj++) {
         j = 2 * jj;
         r2[jj * i2] = r1[j * i1 + i] / 3.0 + (r1[(j - 1) * i1] + r1[(j + 1) * i1] + r1[j * i1 + 1]) / 6.0 + (r1[(j - 1) * i1 + 1] + r1[(j + 1) * i1 + 1]) / 12.0;
-        NSLog(@"r2(%d,%d) = r1(%d,%d)/3 + (r1(%d,%d) + r1(%d,%d) + r1(%d,%d))/6 + (r1(%d,%d) + r1(%d,%d))/12", 0, jj, i, j, 0, j - 1, 0, j + 1, 1, j, 1, j - 1, 1, j + 1);
+        //NSLog(@"r2(%d,%d) = r1(%d,%d)/3 + (r1(%d,%d) + r1(%d,%d) + r1(%d,%d))/6 + (r1(%d,%d) + r1(%d,%d))/12", 0, jj, i, j, 0, j - 1, 0, j + 1, 1, j, 1, j - 1, 1, j + 1);
     }
     
     // top border
@@ -690,7 +690,7 @@ void restrc(float* r1, int i1, int j1, float* r2, int i2, int j2){
     j = 0;
     if (i2 * 2 - 1 == i1) { // same
         i = i1 - 1;
-        r2[ii] = r1[i] * 4.0 / 9.0 + (r1[i - 1] + r1[(j - 1) * i1 + i]) * 2.0 / 9.0 + r1[(j - 1) * i1 + i - 1] / 9.0;
+        r2[ii] = r1[i] * 4.0 / 9.0 + (r1[i - 1] + r1[i1 + i]) * 2.0 / 9.0 + r1[(j + 1) * i1 + i - 1] / 9.0;
     }else{
         i = i1 - 2;
         r2[ii] = r1[i] / 3.0 + (r1[(j + 1) * i1 + i] + r1[j * i1 + i + 1] + r1[j * i1 + i - 1]) / 6.0 + (r1[(j + 1) * i1 + i + 1] + r1[(j + 1) * i1 + i - 1]) / 12.0;
@@ -715,7 +715,7 @@ void restrc(float* r1, int i1, int j1, float* r2, int i2, int j2){
         j = j1 - 2;
         if (i2 * 2 - 1 == i1) { // same right
             i = i1 - 1;
-            r2[jj * i2 + ii] = r1[j * i1 + i] / 3.0 + (r1[(j - 1) * i1] + r1[(j + 1) * i1] + r1[j * i1 + i - 1]) / 6.0 + (r1[(j - 1) * i1 + i - 1] + r1[(j + 1) * i1 + i - 1]) / 12.0;
+            r2[jj * i2 + ii] = r1[j * i1 + i] / 3.0 + (r1[(j - 1) * i1 + i] + r1[(j + 1) * i1 + i] + r1[j * i1 + i - 1]) / 6.0 + (r1[(j - 1) * i1 + i - 1] + r1[(j + 1) * i1 + i - 1]) / 12.0;
         }else{  // difference right
             i = i1 - 2;
             r2[jj * i2 + ii] = r1[j * i1 + i] / 4.0 + (r1[j * i1 + i - 1] +r1[j * i1 + i + 1] +r1[(j - 1) * i1 + i] +r1[(j + 1) * i1 + i]) / 8.0 + (r1[(j + 1) * i1 + i - 1] +r1[(j - 1) * i1 + i + 1] +r1[(j - 1) * i1 + i - 1] +r1[(j + 1) * i1 + i + 1]) / 16.0;
@@ -737,37 +737,58 @@ void _restrc(float* r1, int i1, int j1, float* r2, int i2, int j2){
     }
 }
 
-void prolon(float* d2, int i2, int j2, float* d1, int i1, int j1){
-    zeros(d1, d1, i1, j1);
-    int i, j;
+void prolon(float* r2, int i2, int j2, float* r1, int i1, int j1){
+    zeros(r1, r1, i1, j1);
+    int i, j, ii, jj;
+    int xa, xb, xc, ya, yb, yc;
     
-    for (int ii = 0; ii < i2; ii++) {
-        for (int jj = 0; jj < j2; jj++) {
+    for (ii = 0; ii < i2; ii++) {
+        xb = 2 * ii;
+        for (jj = 0; jj < j2; jj++) {
+            yb = 2 * jj;
+            ya = yb - 1;
+            yc = yb + 1;
+            xa = xb - 1;
+            xc = xb + 1;
             
+            r1[yb * i1 + xb] += r2[jj * i2 + ii];
+            //NSLog(@"r1(%d,%d) += r2(%d,%d)", xb, yb, ii, jj);
+            
+            if ((xa >= 0 && xa < i1) && (ya >= 0 && ya < j1)) {
+                r1[ya * i1 + xa] += r2[jj * i2 + ii] / 4.0;
+                //NSLog(@"r1(%d,%d) += r2(%d,%d) / 4.0", xa, ya, ii, jj);
+            }
+            if ((xa >= 0 && xa < i1) && (yc >= 0 && yc < j1)) {
+                r1[yc * i1 + xa] += r2[jj * i2 + ii] / 4.0;
+                //NSLog(@"r1(%d,%d) += r2(%d,%d) / 4.0", xa, yc, ii, jj);
+            }
+            if ((xc >= 0 && xc < i1) && (ya >= 0 && ya < j1)) {
+                r1[ya * i1 + xc] += r2[jj * i2 + ii] / 4.0;
+                //NSLog(@"r1(%d,%d) += r2(%d,%d) / 4.0", xc, ya, ii, jj);
+            }
+            if ((xc >= 0 && xc < i1) && (yc >= 0 && yc < j1)) {
+                r1[yc * i1 + xc] += r2[jj * i2 + ii] / 4.0;
+                //NSLog(@"r1(%d,%d) += r2(%d,%d) / 4.0", xc, yc, ii, jj);
+            }
+            
+            if ((xa >= 0 && xa < i1) && (yb >= 0 && yb < j1)) {
+                r1[yb * i1 + xa] += r2[jj * i2 + ii] / 2.0;
+                //NSLog(@"r1(%d,%d) += r2(%d,%d) / 4.0", xa, yb, ii, jj);
+            }
+            if ((xb >= 0 && xb < i1) && (yc >= 0 && yc < j1)) {
+                r1[yc * i1 + xb] += r2[jj * i2 + ii] / 2.0;
+                //NSLog(@"r1(%d,%d) += r2(%d,%d) / 4.0", xb, yc, ii, jj);
+            }
+            if ((xb >= 0 && xb < i1) && (ya >= 0 && ya < j1)) {
+                r1[ya * i1 + xb] += r2[jj * i2 + ii] / 2.0;
+                //NSLog(@"r1(%d,%d) += r2(%d,%d) / 4.0", xb, ya, ii, jj);
+            }
+            if ((xc >= 0 && xc < i1) && (yb >= 0 && yb < j1)) {
+                r1[yb * i1 + xc] += r2[jj * i2 + ii] / 2.0;
+                //NSLog(@"r1(%d,%d) += r2(%d,%d) / 4.0", xc, yb, ii, jj);
+            }
+
         }
-    }
-    
-    //NSLog(@"r2(%d,%d) = r1(%d,%d)/4 + (r1(%d,%d)+r1(%d,%d)+r1(%d,%d)+r1(%d,%d))/8 + (r1(%d,%d)+r1(%d,%d)+r1(%d,%d)+r1(%d,%d))/16", ii, jj, i, j, i - 1, j, i + 1, j, i, j - 1, i, j + 1, i + 1, j - 1, i - 1, j - 1, i + 1, j + 1, i - 1, j + 1);
-    
-    for (int i = 1; i < i2 - 1; i++) {
-        for (int j = 1; j < j2 - 1; j++) {
-            d1[2 * j * i1 + 2 * i] = d2[j * i2 + i];
-        }
-    }
-    for (int ii = 1; ii < i2 - 1; ii++) {
-        i = 2 * ii;
-        d1[1 * i1 + i] = (3.0 * d1[0 * i1 + i] + 6.0 * d1[2 * i1 + i] - d1[4 * i1 + i]) / 8.0;
-        for (j = 3; j < j1 - 3; j += 2) {
-            d1[j * i1 + i] = (9.0 * d1[(j - 1) * i1 + i] + 9.0 * d1[(j + 1) * i1 + i] - d1[(j + 3) * i1 + i] - d1[(j - 3) * i1 + i]) / 16.0;
-        }
-        d1[(j1 - 2) * i1 + i] = (6.0 * d1[(j1 - 3) * i1 + i] + 3.0 * d1[(j1 - 1) * i1 + i] - d1[(j1 - 5) * i1 + i]);
-    }
-    for (int j = 1; j < j1 - 1; j++) {
-        d1[j * i1 + 1] = (3.0 * d1[j * i1 + 0] + 6.0 * d1[j * i1 + 2] - d1[j * i1 + 4]) / 8.0;
-        for (int i = 3; i < i1 - 3; i += 2) {
-            d1[j * i1 + i] = (9.0 * d1[j * i1 + i - 1] + 9.0 * d1[j * i1 + i + 1] - d1[j * i1 + i + 3] - d1[j * i1 + i - 3]) / 16.0;
-        }
-        d1[j * i1 + i1 - 2] = (6.0 * d1[j * i1 + i1 - 3] + 3.0 * d1[j * i1 + i1 - 1] - d1[j * i1 + i1 - 5]);
     }
 }
 
@@ -874,8 +895,77 @@ void ones(float* p1, int i1, int j1){
         }
     }
 }
-
 void solve(float* x1, float* f1, int i1, int j1, float threshold){
+    int updated = 1;
+    float prev_i, current_err = 0.0, tmp;
+    int xa, xb, xc, ya, yb, yc;
+    bool* flags = (bool*)malloc(sizeof(bool) * i1 * j1);
+    for (int i = 0; i < i1; i++) {
+        for (int j = 0; j < j1; j++) {
+            flags[j * i1 + i] = false;
+        }
+    }
+    while (updated > 0) {
+        NSLog(@"solving");
+        updated = 0;
+        for (int j = 0; j < j1; j++)
+        {
+            for (int i = 0; i < i1; i++)
+            {
+                if (flags[j * i1 + i] == true) {
+                    //continue;
+                }
+                xb = i;
+                yb = j;
+                xa = xb - 1;
+                xc = xb + 1;
+                ya = yb - 1;
+                yc = yb + 1;
+                
+                if (xa < 0) {
+                    xa = 0;
+                }
+                if (ya < 0) {
+                    ya = 0;
+                }
+                if (xc > i1 - 1) {
+                    xc = i1 - 1;
+                }
+                if (yc > j1 - 1) {
+                    yc = j1 - 1;
+                }
+                
+                prev_i = x1[j * i1 + i];
+                x1[yb * i1 + xb] = 0.25 * (x1[yb * i1 + xc] + x1[yb * i1 + xa] + x1[yc * i1 + xb] + x1[ya * i1 + xb] - f1[j * i1 + i]);
+                //result[j * width + i] = prev_i + 1.25 * (result[j * width + i] - prev_i);
+                NSLog(@"%f = 0.25 * (%f + %f + %f + %f - %f)", x1[yb * i1 + xb] , x1[yb * i1 + xc], x1[yb * i1 + xa], x1[yc * i1 + xb], x1[ya * i1 + xb], f1[j * i1 + i]);
+                //NSLog(@"(%d,%d) = 0.25 * ((%d,%d) + (%d,%d) + (%d,%d) + (%d,%d))", xb, yb, xc, yb, xa, yb, xb, yc, xb, ya);
+                
+                current_err = absd(prev_i - x1[j * i1 + i]);
+                if (current_err > threshold) {
+                    updated++;
+                    flags[j * i1 + i] = false;
+                    flags[j * i1 + i + 1] = false;
+                    flags[j * i1 + i - 1] = false;
+                    flags[(j + 1) * i1 + i] = false;
+                    flags[(j - 1) * i1 + i] = false;
+                    flags[(j + 1) * i1 + i - 1] = false;
+                    flags[(j - 1) * i1 + i + 1] = false;
+                }else{
+                    flags[j * i1 + i] = true;
+                }
+                
+            }
+        }
+        if ((float)updated / (i1 * j1) < 0.00001) {
+            break;
+        }
+        //NSLog(@"Updated %dx%d:%d", i1, j1, updated);
+    }
+    free(flags);
+}
+
+void _solve(float* x1, float* f1, int i1, int j1, float threshold){
     int updated = 1;
     float prev_i, current_err = 0.0;
     bool* flags = (bool*)malloc(sizeof(bool) * i1 * j1);
@@ -897,7 +987,7 @@ void solve(float* x1, float* f1, int i1, int j1, float threshold){
                 prev_i = x1[j * i1 + i];
                 x1[j * i1 + i] = 0.25 * (x1[j * i1 + i + 1] + x1[j * i1 + i - 1] + x1[(j + 1) * i1 + i] + x1[(j - 1) * i1 + i] - f1[j * i1 + i]);
                 //result[j * width + i] = prev_i + 1.25 * (result[j * width + i] - prev_i);
-                NSLog(@"%f = 0.25 * (%f + %f + %f + %f - %f)", x1[j * i1 + i], x1[j * i1 + i + 1], x1[j * i1 + i - 1], x1[(j + 1) * i1 + i], x1[(j - 1) * i1 + i], f1[j * i1 + i]);
+                //NSLog(@"%f = 0.25 * (%f + %f + %f + %f - %f)", x1[j * i1 + i], x1[j * i1 + i + 1], x1[j * i1 + i - 1], x1[(j + 1) * i1 + i], x1[(j - 1) * i1 + i], f1[j * i1 + i]);
 
                 current_err = absd(prev_i - x1[j * i1 + i]);
                 if (current_err > threshold) {
@@ -918,7 +1008,7 @@ void solve(float* x1, float* f1, int i1, int j1, float threshold){
         if ((float)updated / (i1 * j1) < 0.00001) {
             break;
         }
-        NSLog(@"Updated %dx%d:%d", i1, j1, updated);
+        //NSLog(@"Updated %dx%d:%d", i1, j1, updated);
     }
     free(flags);
 }
@@ -1015,8 +1105,13 @@ void mgv(float* u1, float* f1, int i1, int j1, int current_grid, int max_grid){
             r1[j * i1 + i] = u1[j * i1 + i - 1] + u1[j * i1 + i + 1] + u1[(j - 1) * i1 + i] + u1[(j + 1) * i1 + i] - 4.0 * u1[j * i1 + i] - f1[j * i1 + i];
         }
     }
-
+    
+    NSLog(@"restricted %d/%d", current_grid, max_grid);
     restrc(r1, i1, j1, r2, i2, j2);
+    NSLog(@"restrict before r1");
+    map_result(r1, i1, j1);
+    NSLog(@"restrict r2");
+    map_result(r2, i2, j2);
     
     if (current_grid == max_grid) {
         NSLog(@"reached coarsest");
@@ -1028,6 +1123,10 @@ void mgv(float* u1, float* f1, int i1, int j1, int current_grid, int max_grid){
     
     NSLog(@"prolon %d/%d", current_grid, max_grid);
     prolon(d2, i2, j2, d1, i1, j1);
+    NSLog(@"prolon before d2");
+    map_result(d2, i2, j2);
+    NSLog(@"prolon d1");
+    map_result(d1, i1, j1);
     
     for (int i = 1; i < i1 - 1; i++) {
         for (int j = 1; j < j1 - 1; j++) {
@@ -1141,8 +1240,6 @@ void fmg(float* u1, float* f1, int width, int height, int grids){
         NSLog(@"mgved");
         map_result(u1, i1, j1);
         solve(u1, f1, i1, j1, 0.000001);
-        NSLog(@"solved");
-        map_result(u1, i1, j1);
     } else if (grids == 1){
         restrc(f1, i1, j1, f2, i2, j2);
         solve(u2, f2, i2, j2, threshold(2, 2));
@@ -1216,6 +1313,16 @@ void map_result(float* u1, int i1, int j1){
         NSString* str = [NSString stringWithFormat:@""];
         for (int i = 0; i < i1; i++) {
             str = [str stringByAppendingString:[NSString stringWithFormat:@"%f ", u1[j * i1 + i]]];
+        }
+        NSLog(@"%@", str);
+    }
+}
+
+void map_radiances(float* u1, int i1, int j1){
+    for (int j = 0; j < j1; j++) {
+        NSString* str = [NSString stringWithFormat:@""];
+        for (int i = 0; i < i1; i++) {
+            str = [str stringByAppendingString:[NSString stringWithFormat:@"%f ", u1[j * i1 * 4 + i * 4 + 3]]];
         }
         NSLog(@"%@", str);
     }
@@ -1428,13 +1535,16 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
     gradient(g_div, radiances, phis, width, height);
     NSLog(@"called gassb.");
     //gaussb_(result, g_div, width, height);
-    dammy_result(g_div, width, height);
+    //dammy_result(g_div, width, height);
     map_result(g_div, width, height);
     fmg(result, g_div, width, height, 2);
+    NSLog(@"radiances");
+    map_radiances(radiances, width, height);
+    NSLog(@"result");
+    map_result(result, width, height);
     NSLog(@"called expall.");
     expall(result, radiances, width, height, &l_white);
     check_err(result, g_div, phis, width, height);
-    map_result(result, width, height);
 
     free(g_div);
     NSLog(@"l_white: %lf", l_white);
