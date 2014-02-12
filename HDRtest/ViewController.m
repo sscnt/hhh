@@ -905,12 +905,104 @@ void solve(float* x1, float* f1, int i1, int j1, float threshold){
             flags[j * i1 + i] = false;
         }
     }
+
+    
+    // top left
+    prev_i = x1[0];
+    x1[0] = (x1[1] + x1[i1] - f1[0]) / 2.0;
+    current_err = absd(prev_i - x1[0]);
+    if (current_err > threshold) {
+        updated++;
+    }
+    
+    // top right
+    prev_i = x1[i1 - 1];
+    x1[i1 - 1] = (x1[i1 - 2] + x1[i1 - 1] - f1[i1 - 1]) / 2.0;
+    current_err = absd(prev_i - x1[i1 - 1]);
+    if (current_err > threshold) {
+        updated++;
+    }
+    
+    // bottom right
+    prev_i = x1[(j1 - 1) * i1 + i1 - 1];
+    x1[(j1 - 1) * i1 + i1 - 1] = (x1[(j1 - 1) * i1 + i1 - 2] + x1[(j1 - 2) * i1 + i1 - 1] - f1[(j1 - 1) * i1 + i1 - 1]) / 2.0;
+    current_err = absd(prev_i - x1[(j1 - 1) * i1 + i1 - 1]);
+    if (current_err > threshold) {
+        updated++;
+    }
+    
+    // bottom left
+    prev_i = x1[(j1 - 1) * i1];
+    x1[(j1 - 1) * i1] = (x1[(j1 - 1) * i1 + 1] + x1[(j1 - 2) * i1] - f1[(j1 - 1) * i1]) / 2.0;
+    current_err = absd(prev_i - x1[(j1 - 1) * i1]);
+    if (current_err > threshold) {
+        updated++;
+    }
+    
+    
+    
     while (updated > 0) {
-        NSLog(@"solving");
         updated = 0;
-        for (int j = 0; j < j1; j++)
+        
+        NSLog(@"solving");
+        
+        // right and left
+        for (int j = 1; j < j1 - 1; j++) {
+            xb = 0;
+            yb = j;
+            xc = xb + 1;
+            ya = yb - 1;
+            yc = yb + 1;
+            prev_i = x1[yb * i1 + xb];
+            x1[yb * i1 + xb] = (x1[ya * i1 + xb] + x1[yc * i1 + xb] + x1[yb * i1 + xc] - f1[yb * i1 + xb]) / 3.0;
+            current_err = absd(prev_i - x1[yb * i1 + xb]);
+            if (current_err > threshold) {
+                updated++;
+            }
+            
+            xb = i1 - 1;
+            yb = j;
+            xa = xb - 1;
+            ya = yb - 1;
+            yc = yb + 1;
+            prev_i = x1[yb * i1 + xb];
+            x1[yb * i1 + xb] = (x1[ya * i1 + xb] + x1[yc * i1 + xb] + x1[yb * i1 + xa] - f1[yb * i1 + xb]) / 3.0;
+            current_err = absd(prev_i - x1[yb * i1 + xb]);
+            if (current_err > threshold) {
+                updated++;
+            }
+        }
+        
+        // top and bottom
+        for (int i = 1; i < i1 - 1; i++) {
+            xb = i;
+            yb = 0;
+            xa = xb - 1;
+            xc = xb + 1;
+            yc = yb + 1;
+            prev_i = x1[yb * i1 + xb];
+            x1[yb * i1 + xb] = (x1[yb * i1 + xa] + x1[yb * i1 + xc] + x1[yc * i1 + xb] - f1[yb * i1 + xb]) / 3.0;
+            current_err = absd(prev_i - x1[yb * i1 + xb]);
+            if (current_err > threshold) {
+                updated++;
+            }
+            
+            xb = i;
+            yb = j1 - 1;
+            xa = xb - 1;
+            xc = xb + 1;
+            ya = yb - 1;
+            prev_i = x1[yb * i1 + xb];
+            x1[yb * i1 + xb] = (x1[yb * i1 + xa] + x1[yb * i1 + xc] + x1[ya * i1 + xb] - f1[yb * i1 + xb]) / 3.0;
+            current_err = absd(prev_i - x1[yb * i1 + xb]);
+            if (current_err > threshold) {
+                updated++;
+            }
+        }
+        map_result(x1, i1, j1);
+        for (int j = 1; j < j1 - 1; j++)
         {
-            for (int i = 0; i < i1; i++)
+            for (int i = 1; i < i1 - 1; i++)
             {
                 if (flags[j * i1 + i] == true) {
                     //continue;
@@ -922,23 +1014,10 @@ void solve(float* x1, float* f1, int i1, int j1, float threshold){
                 ya = yb - 1;
                 yc = yb + 1;
                 
-                if (xa < 0) {
-                    xa = 0;
-                }
-                if (ya < 0) {
-                    ya = 0;
-                }
-                if (xc > i1 - 1) {
-                    xc = i1 - 1;
-                }
-                if (yc > j1 - 1) {
-                    yc = j1 - 1;
-                }
-                
                 prev_i = x1[j * i1 + i];
+                //NSLog(@"%f = 0.25 * (%f + %f + %f + %f - %f)", x1[yb * i1 + xb] , x1[yb * i1 + xc], x1[yb * i1 + xa], x1[yc * i1 + xb], x1[ya * i1 + xb], f1[j * i1 + i]);
                 x1[yb * i1 + xb] = 0.25 * (x1[yb * i1 + xc] + x1[yb * i1 + xa] + x1[yc * i1 + xb] + x1[ya * i1 + xb] - f1[j * i1 + i]);
                 //result[j * width + i] = prev_i + 1.25 * (result[j * width + i] - prev_i);
-                NSLog(@"%f = 0.25 * (%f + %f + %f + %f - %f)", x1[yb * i1 + xb] , x1[yb * i1 + xc], x1[yb * i1 + xa], x1[yc * i1 + xb], x1[ya * i1 + xb], f1[j * i1 + i]);
                 //NSLog(@"(%d,%d) = 0.25 * ((%d,%d) + (%d,%d) + (%d,%d) + (%d,%d))", xb, yb, xc, yb, xa, yb, xb, yc, xb, ya);
                 
                 current_err = absd(prev_i - x1[j * i1 + i]);
@@ -958,7 +1037,7 @@ void solve(float* x1, float* f1, int i1, int j1, float threshold){
             }
         }
         if ((float)updated / (i1 * j1) < 0.00001) {
-            break;
+            //break;
         }
         //NSLog(@"Updated %dx%d:%d", i1, j1, updated);
     }
@@ -1100,6 +1179,8 @@ void mgv(float* u1, float* f1, int i1, int j1, int current_grid, int max_grid){
     zeros(d1, r1, i1, j1);
     zeros(d2, r2, i2, j2);
     
+    solve(u1, f1, i1, j1, 0.1);
+    
     for (int i = 1; i < i1 - 1; i++) {
         for (int j = 1; j < j1 - 1; j++) {
             r1[j * i1 + i] = u1[j * i1 + i - 1] + u1[j * i1 + i + 1] + u1[(j - 1) * i1 + i] + u1[(j + 1) * i1 + i] - 4.0 * u1[j * i1 + i] - f1[j * i1 + i];
@@ -1133,6 +1214,8 @@ void mgv(float* u1, float* f1, int i1, int j1, int current_grid, int max_grid){
             u1[j * i1 + i] += d1[j * i1 + i];
         }
     }
+    
+    solve(u1, f1, i1, j1, 0.1);
     
     free(d1);
     free(d2);
