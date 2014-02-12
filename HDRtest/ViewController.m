@@ -489,19 +489,19 @@ void apply_phis(float* phis, UIImage** inputImage, UIImage** g1, UIImage** g2, U
                 if(h > max_h){
                     max_h = h;
                 }
-                
                 tmp = (alpha / h) * pow(h / alpha, beta);
-                phi *= tmp * 1.0;
+                tmp *= 0.85;
+                phi *= tmp;
                 if(isnan(phi)){
                     phi = 1.0;
                 }
-                phi = MIN(MAX(phi, 0.8), 1.0);
+                //phi = MIN(MAX(phi, phi), 1.0);
                 if (phi > max_phi) {
                     max_phi = phi;
                 }else if (phi < min_phi){
                     min_phi = phi;
                 }
-                phi = 1.0;
+                //phi = 1.0;
                 phis[j * width + i] = phi;
             }
         }
@@ -509,6 +509,15 @@ void apply_phis(float* phis, UIImage** inputImage, UIImage** g1, UIImage** g2, U
         
     }
     
+    for (int j = 1 ; j < height - 1; j++)
+    {
+        for (int i = 1; i < width - 1; i++)
+        {
+            phi = phis[j * width + i];
+            phi = MIN(MAX(phi, phi), 1.0);
+            phis[j * width + i] = phi;
+        }
+    }
     NSLog(@"max_h: %f", max_h);
     NSLog(@"max_phi: %f", max_phi);
     NSLog(@"min_phi: %f", min_phi);
@@ -726,7 +735,7 @@ void restrc(float* r1, int i1, int j1, float* r2, int i2, int j2){
 
 
 void _restrc(float* r1, int i1, int j1, float* r2, int i2, int j2){
-    zeros(r2, r2, i2, j2);
+    //zeros(r2, r2, i2, j2);
     int i, j;
     for(int ii = 1; ii <= i2 - 1;ii++){
         i = 2 * ii;
@@ -738,7 +747,7 @@ void _restrc(float* r1, int i1, int j1, float* r2, int i2, int j2){
 }
 
 void prolon(float* r2, int i2, int j2, float* r1, int i1, int j1){
-    zeros(r1, r1, i1, j1);
+    //zeros(r1, r1, i1, j1);
     int i, j, ii, jj;
     int xa, xb, xc, ya, yb, yc;
     
@@ -789,6 +798,66 @@ void prolon(float* r2, int i2, int j2, float* r1, int i1, int j1){
             }
 
         }
+    }
+    
+    // difference right border
+    if (i2 * 2 - 1 != i1) {
+        ii = i2 - 1;
+        xb = i1;
+        for (jj = 0; jj < j2; jj++) {
+            yb = 2 * jj;
+            ya = yb - 1;
+            yc = yb + 1;
+            xa = xb - 1;
+            
+            
+            if ((xa >= 0 && xa < i1) && (ya >= 0 && ya < j1)) {
+                r1[ya * i1 + xa] += r2[jj * i2 + ii] / 4.0;
+                //NSLog(@"r1(%d,%d) += r2(%d,%d) / 4.0", xa, ya, ii, jj);
+            }
+            if ((xa >= 0 && xa < i1) && (yc >= 0 && yc < j1)) {
+                r1[yc * i1 + xa] += r2[jj * i2 + ii] / 4.0;
+                //NSLog(@"r1(%d,%d) += r2(%d,%d) / 4.0", xa, yc, ii, jj);
+            }
+            
+            if ((xa >= 0 && xa < i1) && (yb >= 0 && yb < j1)) {
+                r1[yb * i1 + xa] += r2[jj * i2 + ii] / 2.0;
+                //NSLog(@"r1(%d,%d) += r2(%d,%d) / 4.0", xa, yb, ii, jj);
+            }
+        }
+    }
+    
+    // difference bottom border
+    if (j2 * 2 - 1 != j1) {
+        jj = j2 - 1;
+        yb = j1;
+        for (ii = 0; ii < i2; ii++) {
+            xb = 2 * ii;
+            ya = yb - 1;
+            xa = xb - 1;
+            xc = xb + 1;
+
+            if ((xa >= 0 && xa < i1) && (yc >= 0 && yc < j1)) {
+                r1[yc * i1 + xa] += r2[jj * i2 + ii] / 4.0;
+                //NSLog(@"r1(%d,%d) += r2(%d,%d) / 4.0", xa, yc, ii, jj);
+            }
+            if ((xc >= 0 && xc < i1) && (ya >= 0 && ya < j1)) {
+                r1[ya * i1 + xc] += r2[jj * i2 + ii] / 4.0;
+                //NSLog(@"r1(%d,%d) += r2(%d,%d) / 4.0", xc, ya, ii, jj);
+            }
+            
+            if ((xb >= 0 && xb < i1) && (ya >= 0 && ya < j1)) {
+                r1[ya * i1 + xb] += r2[jj * i2 + ii] / 2.0;
+                //NSLog(@"r1(%d,%d) += r2(%d,%d) / 4.0", xb, ya, ii, jj);
+            }
+
+
+        }
+    }
+    
+    // bottom right corner
+    if (j2 * 2 - 1 != j1 && i2 * 2 - 1 != i1) {
+        r1[(j1 - 1) * i1 + i1 - 1] += r2[(j2 - 1) * i2 + i2 - 1] / 4.0;
     }
 }
 
@@ -905,107 +974,17 @@ void solve(float* x1, float* f1, int i1, int j1, float threshold){
             flags[j * i1 + i] = false;
         }
     }
-
-    
-    // top left
-    prev_i = x1[0];
-    x1[0] = (x1[1] + x1[i1] - f1[0]) / 2.0;
-    current_err = absd(prev_i - x1[0]);
-    if (current_err > threshold) {
-        updated++;
-    }
-    
-    // top right
-    prev_i = x1[i1 - 1];
-    x1[i1 - 1] = (x1[i1 - 2] + x1[i1 - 1] - f1[i1 - 1]) / 2.0;
-    current_err = absd(prev_i - x1[i1 - 1]);
-    if (current_err > threshold) {
-        updated++;
-    }
-    
-    // bottom right
-    prev_i = x1[(j1 - 1) * i1 + i1 - 1];
-    x1[(j1 - 1) * i1 + i1 - 1] = (x1[(j1 - 1) * i1 + i1 - 2] + x1[(j1 - 2) * i1 + i1 - 1] - f1[(j1 - 1) * i1 + i1 - 1]) / 2.0;
-    current_err = absd(prev_i - x1[(j1 - 1) * i1 + i1 - 1]);
-    if (current_err > threshold) {
-        updated++;
-    }
-    
-    // bottom left
-    prev_i = x1[(j1 - 1) * i1];
-    x1[(j1 - 1) * i1] = (x1[(j1 - 1) * i1 + 1] + x1[(j1 - 2) * i1] - f1[(j1 - 1) * i1]) / 2.0;
-    current_err = absd(prev_i - x1[(j1 - 1) * i1]);
-    if (current_err > threshold) {
-        updated++;
-    }
-    
-    
     
     while (updated > 0) {
         updated = 0;
         
-        NSLog(@"solving");
-        
-        // right and left
-        for (int j = 1; j < j1 - 1; j++) {
-            xb = 0;
-            yb = j;
-            xc = xb + 1;
-            ya = yb - 1;
-            yc = yb + 1;
-            prev_i = x1[yb * i1 + xb];
-            x1[yb * i1 + xb] = (x1[ya * i1 + xb] + x1[yc * i1 + xb] + x1[yb * i1 + xc] - f1[yb * i1 + xb]) / 3.0;
-            current_err = absd(prev_i - x1[yb * i1 + xb]);
-            if (current_err > threshold) {
-                updated++;
-            }
-            
-            xb = i1 - 1;
-            yb = j;
-            xa = xb - 1;
-            ya = yb - 1;
-            yc = yb + 1;
-            prev_i = x1[yb * i1 + xb];
-            x1[yb * i1 + xb] = (x1[ya * i1 + xb] + x1[yc * i1 + xb] + x1[yb * i1 + xa] - f1[yb * i1 + xb]) / 3.0;
-            current_err = absd(prev_i - x1[yb * i1 + xb]);
-            if (current_err > threshold) {
-                updated++;
-            }
-        }
-        
-        // top and bottom
-        for (int i = 1; i < i1 - 1; i++) {
-            xb = i;
-            yb = 0;
-            xa = xb - 1;
-            xc = xb + 1;
-            yc = yb + 1;
-            prev_i = x1[yb * i1 + xb];
-            x1[yb * i1 + xb] = (x1[yb * i1 + xa] + x1[yb * i1 + xc] + x1[yc * i1 + xb] - f1[yb * i1 + xb]) / 3.0;
-            current_err = absd(prev_i - x1[yb * i1 + xb]);
-            if (current_err > threshold) {
-                updated++;
-            }
-            
-            xb = i;
-            yb = j1 - 1;
-            xa = xb - 1;
-            xc = xb + 1;
-            ya = yb - 1;
-            prev_i = x1[yb * i1 + xb];
-            x1[yb * i1 + xb] = (x1[yb * i1 + xa] + x1[yb * i1 + xc] + x1[ya * i1 + xb] - f1[yb * i1 + xb]) / 3.0;
-            current_err = absd(prev_i - x1[yb * i1 + xb]);
-            if (current_err > threshold) {
-                updated++;
-            }
-        }
-        map_result(x1, i1, j1);
+        //NSLog(@"solving");
         for (int j = 1; j < j1 - 1; j++)
         {
             for (int i = 1; i < i1 - 1; i++)
             {
                 if (flags[j * i1 + i] == true) {
-                    //continue;
+                    continue;
                 }
                 xb = i;
                 yb = j;
@@ -1039,7 +1018,7 @@ void solve(float* x1, float* f1, int i1, int j1, float threshold){
         if ((float)updated / (i1 * j1) < 0.00001) {
             //break;
         }
-        //NSLog(@"Updated %dx%d:%d", i1, j1, updated);
+        NSLog(@"Updated %dx%d %f: %d", i1, j1, threshold, updated);
     }
     free(flags);
 }
@@ -1179,7 +1158,7 @@ void mgv(float* u1, float* f1, int i1, int j1, int current_grid, int max_grid){
     zeros(d1, r1, i1, j1);
     zeros(d2, r2, i2, j2);
     
-    solve(u1, f1, i1, j1, 0.1);
+    solve(u1, f1, i1, j1, 0.05);
     
     for (int i = 1; i < i1 - 1; i++) {
         for (int j = 1; j < j1 - 1; j++) {
@@ -1215,7 +1194,7 @@ void mgv(float* u1, float* f1, int i1, int j1, int current_grid, int max_grid){
         }
     }
     
-    solve(u1, f1, i1, j1, 0.1);
+    solve(u1, f1, i1, j1, 0.025);
     
     free(d1);
     free(d2);
@@ -1223,7 +1202,7 @@ void mgv(float* u1, float* f1, int i1, int j1, int current_grid, int max_grid){
     free(r2);
 }
 
-void fmg(float* u1, float* f1, int width, int height, int grids){
+void fmg(float* u1, float* f1, float* radiances, int width, int height, int grids){
     int i1 = width;
     int j1 = height;
     int i2 = ceil((float)i1 / 2.0);
@@ -1285,9 +1264,9 @@ void fmg(float* u1, float* f1, int width, int height, int grids){
         prolon(u3, i3, j3, u2, i2, j2);
         mgv(u2, f2, i2, j2, 2, 4);
         prolon(u2, i2, j2, u1, i1, j1);
+        set_boundaries(u1, radiances, i1, j1);
         mgv(u1, f1, i1, j1, 1, 4);
-        solve(u1, f1, i1, j1, 0.01);
-        mgv(u1, f1, i1, j1, 1, 4);
+        
     } else if (grids == 3) {
         restrc(f1, i1, j1, f2, i2, j2);
         restrc(f2, i2, j2, f3, i3, j3);
@@ -1322,7 +1301,7 @@ void fmg(float* u1, float* f1, int width, int height, int grids){
         mgv(u1, f1, i1, j1, 1, 2);
         NSLog(@"mgved");
         map_result(u1, i1, j1);
-        solve(u1, f1, i1, j1, 0.000001);
+        solve(u1, f1, i1, j1, 0.001);
     } else if (grids == 1){
         restrc(f1, i1, j1, f2, i2, j2);
         solve(u2, f2, i2, j2, threshold(2, 2));
@@ -1392,6 +1371,7 @@ void check_err(float* u1, float* f1, float* phis, int i1, int j1){
 }
 
 void map_result(float* u1, int i1, int j1){
+    return;
     for (int j = 0; j < j1; j++) {
         NSString* str = [NSString stringWithFormat:@""];
         for (int i = 0; i < i1; i++) {
@@ -1402,6 +1382,7 @@ void map_result(float* u1, int i1, int j1){
 }
 
 void map_radiances(float* u1, int i1, int j1){
+    return;
     for (int j = 0; j < j1; j++) {
         NSString* str = [NSString stringWithFormat:@""];
         for (int i = 0; i < i1; i++) {
@@ -1420,6 +1401,18 @@ void dammy_result(float* u1, int i1, int j1){
         }
     }
 
+}
+
+void set_boundaries(float* u1, float* radiances, int i1, int j1){
+    for (int i = 0; i < i1; i++) {
+        u1[0 * i1 + i] = radiances[0 * i1 * 4 + i * 4 + 3];
+        u1[(j1 - 1) * i1 + i] = radiances[(j1 - 1) * i1 * 4 + i * 4 + 3];
+    }
+    
+    for (int j = 0; j < j1; j++) {
+        u1[j * i1] = radiances[j * i1 * 4 + 0 * 4 + 3];
+        u1[j * i1 + i1 - 1] = radiances[j * i1 * 4 + (i1 - 1) * 4 + 3];
+    }
 }
 
 void mgm2(float* u1, float* radiances, float* f1, int width, int height){
@@ -1501,6 +1494,7 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
 
 - (UIImage *)hdrWithInputImage:(UIImage *)inputImage
 {
+
     UIImage* g0;
     UIImage* g1;
     UIImage* g2;
@@ -1619,8 +1613,10 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
     NSLog(@"called gassb.");
     //gaussb_(result, g_div, width, height);
     //dammy_result(g_div, width, height);
-    map_result(g_div, width, height);
-    fmg(result, g_div, width, height, 2);
+    NSLog(@"boundaries");
+    set_boundaries(result, radiances, width, height);
+    map_result(result, width, height);
+    fmg(result, g_div, radiances, width, height, 4);
     NSLog(@"radiances");
     map_radiances(radiances, width, height);
     NSLog(@"result");
@@ -1632,8 +1628,10 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
     free(g_div);
     NSLog(@"l_white: %lf", l_white);
     
-    float s = 0.6;
+    float s = 0.45;
     alpha = 0.3;
+    
+    float opacity;
     
     
     for (int j = 1 ; j < height; j++)
@@ -1643,12 +1641,15 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
             radiance_index = (j * width) * 4 + i * 4;
             pixel = buffer + j * bytesPerRow + i * 4;
             
-            tmp = result[j * width + i] / l_white;
+            tmp = radiances[radiance_index + 3];
+            opacity = 15.0 * tmp / (1.0 + 15.0 * tmp);
             
+            tmp = result[j * width + i] / l_white;
             
             rgb.r = pow(radiances[radiance_index + 0] / radiances[radiance_index + 3], s) * tmp;
             rgb.g = pow(radiances[radiance_index + 1] / radiances[radiance_index + 3], s) * tmp;
             rgb.b = pow(radiances[radiance_index + 2] / radiances[radiance_index + 3], s) * tmp;
+        
             
             //rgb.r = (((radiances[radiance_index + 0] / radiances[radiance_index + 3] - 1.0) * s) + 1.0) * tmp;
             //rgb.g = (((radiances[radiance_index + 1] / radiances[radiance_index + 3] - 1.0) * s) + 1.0) * tmp;
@@ -1658,7 +1659,6 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
             //rgb.r = rgb.g = rgb.b = (phis[j * width + i] - 0.249) / 0.751;
             
             
-            /*
             // Soft Light
             tmp = (float)*(pixel) / 255.0;
             tmp = rgb.r * alpha + (1.0 - alpha) * tmp;
@@ -1685,6 +1685,7 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
 
             
             
+            /*
              // Hard light
              tmp = (float)*(pixel) / 255.0;
              if(rgb.r < 0.5){
@@ -1711,6 +1712,11 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
             
             //rgb.r = rgb.g = rgb.b = exp(gausian_pyramids[width * height * 4 + j * width + i]);
             //rgb.r = rgb.g = rgb.b = result[j * width + i];
+            
+            
+            rgb.r = opacity * rgb.r + (1.0 - opacity) * radiances[radiance_index + 0];
+            rgb.g = opacity * rgb.g + (1.0 - opacity) * radiances[radiance_index + 1];
+            rgb.b = opacity * rgb.b + (1.0 - opacity) * radiances[radiance_index + 2];
             
             *(pixel) = (int)MAX(MIN(round(rgb.r * 255.0), 255.0), 0.0);
             *(pixel + 1) = (int)MAX(MIN(round(rgb.g * 255.0), 255.0), 0.0);
