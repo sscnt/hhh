@@ -77,6 +77,25 @@
         
     }    else{
         
+        
+        GPUImageBrightnessFilter* filter = [[GPUImageBrightnessFilter alloc] init];
+        filter.brightness = 0.0;
+        GPUImagePicture* picture = [[GPUImagePicture alloc] initWithCGImage:result.CGImage];
+        [picture addTarget:filter];
+        [picture processImage];
+        result = [filter imageFromCurrentlyProcessedOutput];
+        
+        picture = [[GPUImagePicture alloc] initWithCGImage:result.CGImage];
+        
+        GPUImageSoftLightBlendFilter* blend = [[GPUImageSoftLightBlendFilter alloc] init];
+        [picture addTarget:blend atTextureLocation:1];
+        [picture processImage];
+        GPUImagePicture* basePicture = [[GPUImagePicture alloc] initWithCGImage:self.loadedImage.CGImage];
+        [basePicture addTarget:blend];
+        [basePicture processImage];
+        
+        result = [blend imageFromCurrentlyProcessedOutput];
+
 
     }
     
@@ -378,7 +397,7 @@ void gaussb_(float* result, float* g_div, int width, int height){
 }
 
 void expall(float* result, float* radiances, int width, int height, float* l_white){
-    float tmp;
+    float tmp = 1.0;
     *l_white = 0.0;
     for (int j = 0 ; j < height; j++)
     {
@@ -1158,7 +1177,7 @@ void mgv(float* u1, float* f1, int i1, int j1, int current_grid, int max_grid){
     zeros(d1, r1, i1, j1);
     zeros(d2, r2, i2, j2);
     
-    solve(u1, f1, i1, j1, 0.05);
+    solve(u1, f1, i1, j1, 0.001);
     
     for (int i = 1; i < i1 - 1; i++) {
         for (int j = 1; j < j1 - 1; j++) {
@@ -1194,7 +1213,7 @@ void mgv(float* u1, float* f1, int i1, int j1, int current_grid, int max_grid){
         }
     }
     
-    solve(u1, f1, i1, j1, 0.025);
+    solve(u1, f1, i1, j1, 0.001);
     
     free(d1);
     free(d2);
@@ -1413,6 +1432,14 @@ void set_boundaries(float* u1, float* radiances, int i1, int j1){
         u1[j * i1] = radiances[j * i1 * 4 + 0 * 4 + 3];
         u1[j * i1 + i1 - 1] = radiances[j * i1 * 4 + (i1 - 1) * 4 + 3];
     }
+    
+    
+    for (int i = 0; i < i1; i++) {
+        for (int j = 0; j < j1; j++) {
+            u1[j * i1 + i] = radiances[j * i1 * 4 + i * 4 + 3] / 12.0;
+        }
+
+    }    
 }
 
 void mgm2(float* u1, float* radiances, float* f1, int width, int height){
@@ -1520,8 +1547,8 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
     exp0 = 1.0;
     exp2 = 0.5;
     exp4 = 0.25;
-    exp_2 = 2.0;
-    exp_4 = 4.0;
+    exp_2 = 3.0;
+    exp_4 = 6.0;
     
     float lum, alpha;
     float tmp;
@@ -1628,7 +1655,7 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
     free(g_div);
     NSLog(@"l_white: %lf", l_white);
     
-    float s = 0.45;
+    float s = 0.6;
     alpha = 0.3;
     
     float opacity;
@@ -1657,8 +1684,9 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
             
             
             //rgb.r = rgb.g = rgb.b = (phis[j * width + i] - 0.249) / 0.751;
+            //rgb.r = rgb.g = rgb.b = tmp;
             
-            
+            /*
             // Soft Light
             tmp = (float)*(pixel) / 255.0;
             tmp = rgb.r * alpha + (1.0 - alpha) * tmp;
@@ -1681,7 +1709,7 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
             }else{
                 rgb.b = pow(tmp, 0.5 / rgb.b);
             }
-             
+            */
 
             
             
@@ -1717,6 +1745,7 @@ void mgm2(float* u1, float* radiances, float* f1, int width, int height){
             rgb.r = opacity * rgb.r + (1.0 - opacity) * radiances[radiance_index + 0];
             rgb.g = opacity * rgb.g + (1.0 - opacity) * radiances[radiance_index + 1];
             rgb.b = opacity * rgb.b + (1.0 - opacity) * radiances[radiance_index + 2];
+            
             
             *(pixel) = (int)MAX(MIN(round(rgb.r * 255.0), 255.0), 0.0);
             *(pixel + 1) = (int)MAX(MIN(round(rgb.g * 255.0), 255.0), 0.0);
